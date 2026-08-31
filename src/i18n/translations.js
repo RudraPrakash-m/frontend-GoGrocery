@@ -98,7 +98,7 @@ export const translations = {
     noProductsFound: 'No products found',
     productDetails: 'Product Details',
     minStock: 'Minimum Stock',
-    editProduct: 'Edit Product',
+    editProduct: 'Edit Product Details',
     stockHistory: 'Stock History',
     today: 'Today',
     yesterday: 'Yesterday',
@@ -210,6 +210,13 @@ export const translations = {
     switchCamera: 'Switch Camera',
     addNewProduct: 'Add Product to Catalog',
     scanAgain: 'Scan Again',
+    // Confirm & Edit Translations
+    confirmDeleteTitle: 'Delete Product',
+    confirmDeleteMessage: 'Are you sure you want to delete this product from catalog?',
+    confirmEditTitle: 'Update Product Details',
+    confirmEditMessage: 'Are you sure you want to save changes to this product?',
+    productUpdatedSuccess: 'Product details updated successfully!',
+    productDeletedSuccess: 'Product deleted from catalog.',
   },
   or: {
     appName: 'ଗୋ ଗ୍ରୋସେରୀ',
@@ -421,5 +428,12 @@ export const translations = {
     switchCamera: 'କ୍ୟାମେରା ବଦଳାନ୍ତୁ',
     addNewProduct: 'କାଟାଲଗ୍ ରେ ଉତ୍ପାଦ ଯୋଡନ୍ତୁ',
     scanAgain: 'ପୁଣି ସ୍କାନ୍ କରନ୍ତୁ',
+    // Confirm & Edit Translations
+    confirmDeleteTitle: 'ଉତ୍ପାଦ ଡିଲିଟ୍ କରନ୍ତୁ',
+    confirmDeleteMessage: 'ଆପଣ ଏହି ଉତ୍ପାଦଟିକୁ ଦୋକାନରୁ ଡିଲିଟ୍ କରିବାକୁ ନିଶ୍ଚିତ କି?',
+    confirmEditTitle: 'ଉତ୍ପାଦ ବିବରଣୀ ସେଭ୍ କରନ୍ତୁ',
+    confirmEditMessage: 'ଆପଣ ଏହି ଉତ୍ପାଦ ବିବରଣୀ ସେଭ୍ କରିବାକୁ ନିଶ୍ଚିତ କି?',
+    productUpdatedSuccess: 'ଉତ୍ପାଦ ବିବରଣୀ ସଫଳତାପୂର୍ବକ ବଦଳାଗଲା!',
+    productDeletedSuccess: 'ଉତ୍ପାଦ କାଟାଲଗ୍ ରୁ ଡିଲିଟ୍ ହେଲା।',
   },
 };

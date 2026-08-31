@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Plus, Package, Edit, Trash2 } from 'lucide-react';
 import { productService } from '../services/productService';
 import ProductSearchBar from '../components/ProductSearchBar';
+import EditProductModal from '../components/EditProductModal';
+import ConfirmModal from '../../../components/common/ConfirmModal';
 
 const ProductsPage = () => {
   const { t, i18n } = useTranslation();
@@ -13,6 +16,11 @@ const ProductsPage = () => {
   const [products, setProducts] = useState(productService.getProducts());
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+
+  // Modal States
+  const [editingProduct, setEditingProduct] = useState(null); // Product currently being edited in form
+  const [pendingEditProduct, setPendingEditProduct] = useState(null); // Product waiting for ConfirmModal verification
+  const [deletingProductId, setDeletingProductId] = useState(null); // Product waiting for Delete ConfirmModal
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
@@ -32,10 +40,28 @@ const ProductsPage = () => {
     outOfStock: products.filter((p) => p.stock === 0).length,
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Delete product?')) {
-      setProducts((prev) => prev.filter((p) => p.id !== id));
-    }
+  // Called when user clicks "Save Product" inside EditProductModal -> triggers ConfirmModal
+  const handleEditModalSave = (updatedProduct) => {
+    setEditingProduct(null);
+    setPendingEditProduct(updatedProduct);
+  };
+
+  // Called when user clicks "Confirm Save" in ConfirmModal for Edit
+  const handleConfirmEditSave = () => {
+    if (!pendingEditProduct) return;
+    setProducts((prev) =>
+      prev.map((p) => (p.id === pendingEditProduct.id ? pendingEditProduct : p))
+    );
+    setPendingEditProduct(null);
+    toast.success(t('productUpdatedSuccess'));
+  };
+
+  // Called when user clicks "Confirm Delete" in ConfirmModal for Delete
+  const handleConfirmDelete = () => {
+    if (!deletingProductId) return;
+    setProducts((prev) => prev.filter((p) => p.id !== deletingProductId));
+    setDeletingProductId(null);
+    toast.success(t('productDeletedSuccess'));
   };
 
   return (
@@ -74,9 +100,13 @@ const ProductsPage = () => {
         {/* Product Table */}
         <div className="overflow-x-auto min-w-full">
           <table className="w-full text-left text-xs sm:text-sm">
-            <thead className={`bg-slate-50 border-b border-slate-100 uppercase tracking-wider ${
-              isOdia ? 'text-xs sm:text-sm font-black text-slate-700' : 'text-[11px] sm:text-xs font-extrabold text-slate-500'
-            }`}>
+            <thead
+              className={`bg-slate-50 border-b border-slate-100 uppercase tracking-wider ${
+                isOdia
+                  ? 'text-xs sm:text-sm font-black text-slate-700'
+                  : 'text-[11px] sm:text-xs font-extrabold text-slate-500'
+              }`}
+            >
               <tr>
                 <th className="py-3 px-4">{t('productName')}</th>
                 <th className="py-3 px-4">{t('category')}</th>
@@ -131,14 +161,18 @@ const ProductsPage = () => {
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={() => alert(`Edit ${p.name}`)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                          type="button"
+                          onClick={() => setEditingProduct(p)}
+                          className="p-2 rounded-xl text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 active:scale-95 transition-all cursor-pointer"
+                          title={t('edit')}
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(p.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                          type="button"
+                          onClick={() => setDeletingProductId(p.id)}
+                          className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition-all cursor-pointer"
+                          title={t('delete')}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -151,6 +185,38 @@ const ProductsPage = () => {
           </table>
         </div>
       </div>
+
+      {/* EDIT PRODUCT MODAL */}
+      <EditProductModal
+        isOpen={Boolean(editingProduct)}
+        product={editingProduct}
+        onSave={handleEditModalSave}
+        onClose={() => setEditingProduct(null)}
+      />
+
+      {/* REUSABLE CONFIRM EDIT POPUP MODAL */}
+      <ConfirmModal
+        isOpen={Boolean(pendingEditProduct)}
+        title={t('confirmEditTitle')}
+        message={t('confirmEditMessage')}
+        variant="info"
+        confirmText={t('save')}
+        cancelText={t('cancel')}
+        onConfirm={handleConfirmEditSave}
+        onCancel={() => setPendingEditProduct(null)}
+      />
+
+      {/* REUSABLE CONFIRM DELETE POPUP MODAL */}
+      <ConfirmModal
+        isOpen={Boolean(deletingProductId)}
+        title={t('confirmDeleteTitle')}
+        message={t('confirmDeleteMessage')}
+        variant="danger"
+        confirmText={t('delete')}
+        cancelText={t('cancel')}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeletingProductId(null)}
+      />
     </div>
   );
 };
