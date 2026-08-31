@@ -17,7 +17,9 @@ import {
 import { INITIAL_PRODUCTS } from '../../../constants/mockProducts';
 
 const AddStockPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isOdia = i18n.language === 'or';
+
   const [activeTab, setActiveTab] = useState('menu'); // 'menu', 'scanExisting', 'createProductModal'
   const [products, setProducts] = useState(INITIAL_PRODUCTS);
 
@@ -78,7 +80,7 @@ const AddStockPage = () => {
 
   const handleSaveGeneratedProduct = () => {
     const codeToSave = generatedBarcode || `890${Math.floor(1000000000 + Math.random() * 9000000000)}`;
-    const nameToSave = productName || 'New Product';
+    const nameToSave = productName || (isOdia ? 'ନୂଆ ଉତ୍ପାଦ' : 'New Product');
 
     const newProd = {
       id: Date.now(),
@@ -149,10 +151,10 @@ const AddStockPage = () => {
 
           <div>
             <h3 className="font-extrabold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">
-              Quick Restock Stock
+              {t('quickRestockTitle')}
             </h3>
             <p className="text-xs text-slate-500 font-semibold mt-1">
-              Scan barcode or search existing product to add quantity
+              {t('quickRestockSubtitle')}
             </p>
           </div>
         </button>
@@ -172,10 +174,10 @@ const AddStockPage = () => {
 
           <div>
             <h3 className="font-extrabold text-white text-lg tracking-tight">
-              Create Barcode & Add Product
+              {t('createProductTitle')}
             </h3>
             <p className="text-xs text-emerald-100 font-medium mt-1">
-              Generate unique 13-digit EAN barcode and save new item
+              {t('createProductSubtitle')}
             </p>
           </div>
         </button>
@@ -202,8 +204,8 @@ const AddStockPage = () => {
                   <Scan className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-slate-900 text-base">Quick Restock Product</h3>
-                  <p className="text-xs text-slate-500 font-semibold">Search by name or scan barcode</p>
+                  <h3 className="font-extrabold text-slate-900 text-base">{t('quickRestockTitle')}</h3>
+                  <p className="text-xs text-slate-500 font-semibold">{t('searchByNameOrBarcode')}</p>
                 </div>
               </div>
 
@@ -310,8 +312,8 @@ const AddStockPage = () => {
                   <Sparkles className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-slate-900 text-base">{t('createBarcode')}</h3>
-                  <p className="text-xs text-slate-500 font-semibold">Generate 13-digit barcode & add product</p>
+                  <h3 className="font-extrabold text-slate-900 text-base">{t('createProductTitle')}</h3>
+                  <p className="text-xs text-slate-500 font-semibold">{t('createProductSubtitle')}</p>
                 </div>
               </div>
 
@@ -335,7 +337,7 @@ const AddStockPage = () => {
                   <div className="p-4 rounded-2xl bg-slate-900 text-white space-y-2 text-center shadow-lg">
                     <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-extrabold text-xs uppercase tracking-wider">
                       <Barcode className="w-4 h-4" />
-                      <span>13-Digit EAN Barcode</span>
+                      <span>{t('eanBarcodeLabel')}</span>
                     </div>
 
                     <p className="text-2xl font-black font-mono tracking-widest text-white">

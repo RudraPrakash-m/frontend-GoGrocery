@@ -6,7 +6,8 @@ import { productService } from '../services/productService';
 import ProductSearchBar from '../components/ProductSearchBar';
 
 const ProductsPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isOdia = i18n.language === 'or';
   const navigate = useNavigate();
 
   const [products, setProducts] = useState(productService.getProducts());
@@ -46,13 +47,13 @@ const ProductsPage = () => {
             {t('products')}
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Total {products.length} products in store
+            {t('total')} {products.length} {t('products')}
           </p>
         </div>
 
         <button
           onClick={() => navigate('/inventory/add')}
-          className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 transition-all self-start sm:self-auto text-sm"
+          className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 transition-all self-start sm:self-auto text-sm cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>{t('addStock')}</span>
@@ -73,20 +74,22 @@ const ProductsPage = () => {
         {/* Product Table */}
         <div className="overflow-x-auto min-w-full">
           <table className="w-full text-left text-xs sm:text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
+            <thead className={`bg-slate-50 border-b border-slate-100 uppercase tracking-wider ${
+              isOdia ? 'text-xs sm:text-sm font-black text-slate-700' : 'text-[11px] sm:text-xs font-extrabold text-slate-500'
+            }`}>
               <tr>
-                <th className="py-3 px-4">Product</th>
-                <th className="py-3 px-4">Category</th>
-                <th className="py-3 px-4">Price</th>
-                <th className="py-3 px-4">Stock</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3 px-4">{t('productName')}</th>
+                <th className="py-3 px-4">{t('category')}</th>
+                <th className="py-3 px-4">{t('sellingPrice')}</th>
+                <th className="py-3 px-4">{t('stock')}</th>
+                <th className="py-3 px-4 text-right">{t('actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
               {filteredProducts.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-slate-400 font-bold text-xs">
-                    No products found
+                    {t('noProductsFound')}
                   </td>
                 </tr>
               ) : (
@@ -129,13 +132,13 @@ const ProductsPage = () => {
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => alert(`Edit ${p.name}`)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(p.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

@@ -24,18 +24,22 @@ const SalesPage = () => {
             {t('sales')}
           </h1>
           <p className="text-xs font-bold text-slate-500 mt-1">
-            Complete transaction history and customer bills
+            {t('salesSubtitle')}
           </p>
         </div>
 
         <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs self-start sm:self-auto">
           <div className="text-right">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Sales</p>
+            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+              {t('totalSalesLabel')}
+            </p>
             <p className="text-xl font-black text-emerald-600">₹{totalSalesAmount.toLocaleString()}</p>
           </div>
           <div className="h-8 w-px bg-slate-200" />
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bills</p>
+            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+              {t('billsLabel')}
+            </p>
             <p className="text-xl font-black text-slate-900">{totalSalesCount}</p>
           </div>
         </div>
@@ -49,7 +53,7 @@ const SalesPage = () => {
             filter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          All Invoices
+          {t('allInvoices')}
         </button>
         <button
           onClick={() => setFilter('UPI')}
@@ -57,7 +61,7 @@ const SalesPage = () => {
             filter === 'UPI' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          UPI Payments
+          {t('upiPayments')}
         </button>
         <button
           onClick={() => setFilter('CASH')}
@@ -65,7 +69,7 @@ const SalesPage = () => {
             filter === 'CASH' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          CASH Payments
+          {t('cashPayments')}
         </button>
         <button
           onClick={() => setFilter('CARD')}
@@ -73,19 +77,19 @@ const SalesPage = () => {
             filter === 'CARD' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          CARD Payments
+          {t('cardPayments')}
         </button>
       </div>
 
       {/* Transactions & Saved Bills List */}
       <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3">
         <h3 className="font-extrabold text-slate-900 text-sm md:text-base border-b border-slate-100 pb-3">
-          Saved Store Invoices & Bills
+          {t('savedInvoicesHeader')}
         </h3>
 
         {salesHistory.length === 0 ? (
           <p className="text-center py-10 text-slate-400 font-bold text-sm">
-            No sales completed yet. Complete a sale on POS to see saved bills here.
+            {t('noSalesHistory')}
           </p>
         ) : (
           <div className="divide-y divide-slate-100 space-y-1">
@@ -107,7 +111,7 @@ const SalesPage = () => {
                           {item.invoiceNo}
                         </p>
                         <p className="text-[11px] text-slate-400 font-semibold truncate">
-                          {item.date} · {item.time} ({item.itemsCount || (item.items ? item.items.length : 1)} items)
+                          {item.date} · {item.time} ({item.itemsCount || (item.items ? item.items.length : 1)} {t('items')})
                         </p>
                       </div>
                     </div>
@@ -158,7 +162,7 @@ const SalesPage = () => {
                       className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs shrink-0"
                     >
                       <Eye className="w-4 h-4" />
-                      <span>View Bill</span>
+                      <span>{t('viewBill')}</span>
                     </button>
                   </div>
                 </div>

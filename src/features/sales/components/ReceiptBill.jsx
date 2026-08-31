@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Printer, Share2, ShoppingBag } from 'lucide-react';
 
 const ReceiptBill = ({ invoice, onNewSale, onClose }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isOdia = i18n.language === 'or';
 
   if (!invoice) return null;
 
@@ -65,7 +66,9 @@ const ReceiptBill = ({ invoice, onNewSale, onClose }) => {
 
         {/* Itemized Table */}
         <div className="space-y-2 py-1 font-sans">
-          <div className="grid grid-cols-12 font-extrabold uppercase text-[10px] text-slate-400 border-b border-slate-200 pb-1">
+          <div className={`grid grid-cols-12 uppercase border-b border-slate-200 pb-1 text-slate-500 ${
+            isOdia ? 'text-xs font-black text-slate-700' : 'text-[10px] font-extrabold text-slate-400'
+          }`}>
             <span className="col-span-6">{t('itemHeader')}</span>
             <span className="col-span-2 text-center">{t('qtyHeader')}</span>
             <span className="col-span-2 text-right">{t('rateHeader')}</span>

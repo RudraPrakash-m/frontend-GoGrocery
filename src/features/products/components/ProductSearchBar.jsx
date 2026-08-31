@@ -21,27 +21,29 @@ const ProductSearchBar = ({ search, setSearch, filter, setFilter, counts }) => {
       <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl overflow-x-auto max-w-full font-semibold shrink-0">
         <button
           onClick={() => setFilter('all')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             filter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
           }`}
         >
-          All ({counts.all})
+          {t('all')} ({counts.all})
         </button>
+
         <button
           onClick={() => setFilter('lowStock')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             filter === 'lowStock' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
           }`}
         >
           {t('lowStock')} ({counts.lowStock})
         </button>
+
         <button
           onClick={() => setFilter('outOfStock')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             filter === 'outOfStock' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
           }`}
         >
-          Out of Stock ({counts.outOfStock})
+          {t('outOfStock')} ({counts.outOfStock})
         </button>
       </div>
     </div>
