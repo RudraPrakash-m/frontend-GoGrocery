@@ -33,6 +33,7 @@ const AddStockPage = () => {
 
   // Create Barcode & Add New Product State
   const [generatedBarcode, setGeneratedBarcode] = useState(null);
+  const [isScannedBarcode, setIsScannedBarcode] = useState(false); // True if pre-filled from camera/USB barcode scan
   const [productName, setProductName] = useState('');
   const [category, setCategory] = useState('Grocery');
   const [sellingPrice, setSellingPrice] = useState('');
@@ -40,6 +41,9 @@ const AddStockPage = () => {
   const [unit, setUnit] = useState('Pcs');
   const [initialQty, setInitialQty] = useState('10');
   const [createSuccess, setCreateSuccess] = useState(false);
+
+  // Print Barcode Label Modal State
+  const [showPrintLabelModal, setShowPrintLabelModal] = useState(false);
 
   // When Existing Product is Scanned/Selected
   const handleSelectProductToRestock = (product) => {
@@ -49,8 +53,9 @@ const AddStockPage = () => {
 
   // When Scanned Barcode DOES NOT EXIST -> Auto-redirect to New Product Form with barcode pre-filled
   const handleUnrecognizedBarcodeScanned = (scannedBarcode) => {
-    toast.info(isOdia ? 'ଉତ୍ପାଦ ମିଳିଲା ନାହିଁ। ନୂଆ ଉତ୍ପାଦ ଯୋଡନ୍ତୁ।' : `Barcode ${scannedBarcode} not in catalog. Add new product details below.`);
+    toast.info(isOdia ? 'ଉତ୍ପାଦ ମିଳିଲା ନାହିଁ। ନୂଆ ଉତ୍ପାଦ ଯୋଡନ୍ତୁ।' : `Barcode ${scannedBarcode} not in catalog. Enter product details below.`);
     setGeneratedBarcode(scannedBarcode);
+    setIsScannedBarcode(true); // Hide "Generate Barcode" button since barcode is already scanned from camera
     setProductName('');
     setSellingPrice('');
     setPurchasePrice('');
@@ -64,7 +69,6 @@ const AddStockPage = () => {
     if (!foundProduct) return;
 
     const parsedQty = parseInt(quantityToAdd, 10);
-    // If user enters quantity, increase by that quantity; else default to +1
     const addedAmount = isNaN(parsedQty) || parsedQty <= 0 ? 1 : parsedQty;
     const prevStock = foundProduct.stock;
     const newStockAmount = prevStock + addedAmount;
@@ -88,10 +92,11 @@ const AddStockPage = () => {
     }, 2500);
   };
 
-  // Generates unique 13-digit EAN barcode
+  // Generates unique 13-digit EAN barcode manually
   const handleGenerateBarcode = () => {
     const uniqueCode = `890${Math.floor(1000000000 + Math.random() * 9000000000)}`;
     setGeneratedBarcode(uniqueCode);
+    setIsScannedBarcode(false);
     toast.info(`${t('generatedBarcodeInfo')}: ${uniqueCode}`);
   };
 
@@ -120,6 +125,7 @@ const AddStockPage = () => {
       setCreateSuccess(false);
       setActiveTab('menu');
       setGeneratedBarcode(null);
+      setIsScannedBarcode(false);
       setProductName('');
       setSellingPrice('');
       setPurchasePrice('');
@@ -306,7 +312,10 @@ const AddStockPage = () => {
             <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-5 my-auto relative animate-fadeIn">
               <button
                 type="button"
-                onClick={() => setActiveTab('menu')}
+                onClick={() => {
+                  setActiveTab('menu');
+                  setIsScannedBarcode(false);
+                }}
                 className="absolute top-4 right-4 w-9 h-9 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -317,8 +326,12 @@ const AddStockPage = () => {
                   <Sparkles className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-slate-900 text-base">{t('createProductTitle')}</h3>
-                  <p className="text-xs text-slate-500 font-semibold">{t('createProductSubtitle')}</p>
+                  <h3 className="font-extrabold text-slate-900 text-base">
+                    {isScannedBarcode ? 'Add Scanned Product' : t('createProductTitle')}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-semibold">
+                    {isScannedBarcode ? 'Enter details for newly scanned barcode item' : t('createProductSubtitle')}
+                  </p>
                 </div>
               </div>
 
@@ -338,25 +351,34 @@ const AddStockPage = () => {
                   }}
                   className="space-y-4"
                 >
-                  {/* Generated or Scanned Barcode Card Box */}
+                  {/* Barcode Display Card Box */}
                   <div className="p-4 rounded-2xl bg-slate-900 text-white space-y-2 text-center shadow-lg">
                     <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-extrabold text-xs uppercase tracking-wider">
                       <Barcode className="w-4 h-4" />
-                      <span>{t('eanBarcodeLabel')}</span>
+                      <span>{isScannedBarcode ? 'Scanned Product Package Barcode' : t('eanBarcodeLabel')}</span>
                     </div>
 
                     <p className="text-2xl font-black font-mono tracking-widest text-white">
                       {generatedBarcode || '8901234567890'}
                     </p>
 
-                    <button
-                      type="button"
-                      onClick={handleGenerateBarcode}
-                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>{t('generateBarcode')}</span>
-                    </button>
+                    {/* HIDE Generate Barcode button when barcode comes from scanner camera */}
+                    {!isScannedBarcode && (
+                      <button
+                        type="button"
+                        onClick={handleGenerateBarcode}
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>{t('generateBarcode')}</span>
+                      </button>
+                    )}
+
+                    {isScannedBarcode && (
+                      <span className="inline-block px-3 py-1 bg-emerald-500/20 text-emerald-300 font-extrabold text-[10px] rounded-full border border-emerald-500/30">
+                        ✓ Scanned from Product Package
+                      </span>
+                    )}
                   </div>
 
                   {/* Product Name */}
@@ -453,28 +475,101 @@ const AddStockPage = () => {
                     />
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 pt-2">
+                  {/* RESPONSIVE ACTION BUTTONS CONTAINER */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        toast.info(t('printBarcode'));
-                      }}
-                      className="w-1/3 py-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-1"
+                      onClick={() => setShowPrintLabelModal(true)}
+                      className="flex-1 py-3 px-3 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm whitespace-nowrap"
                     >
-                      <Printer className="w-4 h-4" />
+                      <Printer className="w-4 h-4 text-emerald-400 shrink-0" />
                       <span>{t('printBarcode')}</span>
                     </button>
 
                     <button
                       type="submit"
-                      className="w-2/3 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-2xl shadow-md shadow-emerald-600/30 transition-all cursor-pointer"
+                      className="flex-[1.5] py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-sm rounded-2xl shadow-md shadow-emerald-600/30 transition-all cursor-pointer whitespace-nowrap"
                     >
                       {t('saveProduct')}
                     </button>
                   </div>
                 </form>
               )}
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* PRINT BARCODE LABEL MODAL PORTAL */}
+      {showPrintLabelModal &&
+        createPortal(
+          <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[999999] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-slate-200 shadow-2xl space-y-5 my-auto relative animate-fadeIn text-center">
+              <button
+                type="button"
+                onClick={() => setShowPrintLabelModal(false)}
+                className="absolute top-4 right-4 w-9 h-9 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-2 justify-center border-b border-slate-100 pb-3 text-slate-900 font-extrabold">
+                <Printer className="w-5 h-5 text-emerald-600" />
+                <span>Barcode Label Sticker</span>
+              </div>
+
+              {/* Printable Barcode Label Card */}
+              <div id="printableBarcodeSticker" className="bg-white border-2 border-slate-900 rounded-2xl p-4 space-y-2 text-center shadow-md font-mono text-slate-900">
+                <p className="text-xs font-black uppercase tracking-wider text-emerald-700 font-sans">
+                  GoGrocery Kirana
+                </p>
+                <p className="text-sm font-extrabold font-sans text-slate-900 truncate">
+                  {productName || 'Sample Grocery Product'}
+                </p>
+                <p className="text-lg font-black font-sans text-emerald-600">
+                  ₹{sellingPrice || '45'}
+                </p>
+
+                {/* Barcode Graphic */}
+                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 inline-block w-full">
+                  <div className="flex items-center justify-center gap-1 h-10 px-2 bg-white rounded border border-slate-200">
+                    <div className="w-1 h-8 bg-slate-900" />
+                    <div className="w-0.5 h-8 bg-slate-900" />
+                    <div className="w-2 h-8 bg-slate-900" />
+                    <div className="w-1 h-8 bg-slate-900" />
+                    <div className="w-1.5 h-8 bg-slate-900" />
+                    <div className="w-0.5 h-8 bg-slate-900" />
+                    <div className="w-2.5 h-8 bg-slate-900" />
+                    <div className="w-1 h-8 bg-slate-900" />
+                    <div className="w-2 h-8 bg-slate-900" />
+                  </div>
+                  <p className="text-xs font-mono font-extrabold text-slate-800 mt-1.5 tracking-widest">
+                    {generatedBarcode || '8901234567890'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Print Action Buttons */}
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.print();
+                  }}
+                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-sm rounded-2xl shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Print Barcode Label</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowPrintLabelModal(false)}
+                  className="w-full py-2 text-xs font-extrabold text-slate-500 hover:text-slate-900 cursor-pointer"
+                >
+                  {t('close')}
+                </button>
+              </div>
             </div>
           </div>,
           document.body

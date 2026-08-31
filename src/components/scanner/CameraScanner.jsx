@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader, BarcodeFormat } from '@zxing/library';
-import { RefreshCw, CameraOff, AlertCircle, Camera } from 'lucide-react';
+import { RefreshCw, CameraOff, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const CameraScanner = ({ onScanSuccess, onError, active = true }) => {
@@ -60,18 +60,17 @@ const CameraScanner = ({ onScanSuccess, onError, active = true }) => {
   const startScanning = async () => {
     stopCamera();
 
-    if (!codeReaderRef.current) {
-      codeReaderRef.current = new BrowserMultiFormatReader(hints.current);
-    }
+    // Set 50ms timeBetweenDecodingAttempts for ultra-fast instant detection (20 checks/sec)
+    codeReaderRef.current = new BrowserMultiFormatReader(hints.current, 50);
 
     setCameraError(null);
     setIsScanning(true);
 
     try {
-      // Build constraints - prefer rear camera ('environment') on mobile
+      // Optimal video constraints for rapid barcode detection
       const constraints = selectedDeviceId
         ? { video: { deviceId: { exact: selectedDeviceId } } }
-        : { video: { facingMode: { ideal: facingMode } } };
+        : { video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } } };
 
       const controls = await codeReaderRef.current.decodeFromConstraints(
         constraints,
@@ -84,7 +83,7 @@ const CameraScanner = ({ onScanSuccess, onError, active = true }) => {
             const now = Date.now();
             if (
               lastScannedRef.current.value === scannedText &&
-              now - lastScannedRef.current.time < 2000
+              now - lastScannedRef.current.time < 1500
             ) {
               return;
             }
