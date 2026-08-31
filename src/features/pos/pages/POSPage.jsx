@@ -78,11 +78,11 @@ const POSPage = () => {
         ];
       });
 
-      toast.success(`Added ${product.name} to cart!`);
+      toast.success(t('addedToCartSuccess'));
       setActiveTab('menu');
       setHardwareBarcodeInput('');
     } else {
-      toast.error(`Product not found for code: ${barcodeToScan}`);
+      toast.error(t('productNotFound'));
     }
   };
 
@@ -113,20 +113,16 @@ const POSPage = () => {
       ];
     });
 
-    toast.success(`Added ${product.name} to cart!`);
+    toast.success(t('addedToCartSuccess'));
   };
 
   const updateQty = (id, delta) => {
     setCart((prev) =>
       prev
-        .map((item) => {
-          if (item.id === id) {
-            const newQty = item.qty + delta;
-            return newQty > 0 ? { ...item, qty: newQty } : null;
-          }
-          return item;
-        })
-        .filter(Boolean)
+        .map((item) =>
+          item.id === id ? { ...item, qty: item.qty + delta } : item
+        )
+        .filter((item) => item.qty > 0)
     );
   };
 
@@ -134,18 +130,19 @@ const POSPage = () => {
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
   const discount = 0;
-  const total = subtotal - discount;
+  const total = Math.max(0, subtotal - discount);
+  const totalItems = cart.reduce((sum, i) => sum + i.qty, 0);
 
   const handleCompleteSale = () => {
     if (cart.length === 0) return;
-    const invoiceNo = `INV-${Math.floor(10000 + Math.random() * 90000)}`;
+
     const now = new Date();
+    const invoiceNo = `INV-${Math.floor(10000 + Math.random() * 90000)}`;
 
     const invoiceObj = {
-      id: `inv-${Date.now()}`,
+      id: Date.now(),
       invoiceNo,
       date: now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
       time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
@@ -165,7 +162,7 @@ const POSPage = () => {
     dispatch(addSale(invoiceObj));
     setCompletedInvoice(invoiceObj);
     setStep('completed');
-    toast.success(`Sale Completed! Invoice ${invoiceNo} saved.`);
+    toast.success(t('saleCompletedSuccess'));
   };
 
   const resetSale = () => {
@@ -192,7 +189,7 @@ const POSPage = () => {
           <div className="text-center pt-2">
             <span className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-emerald-100 text-emerald-800 font-extrabold text-sm rounded-full">
               <CheckCircle className="w-4 h-4 text-emerald-600" />
-              <span>Sale Completed & Bill Saved to Sales History!</span>
+              <span>{t('saleCompletedSuccess')}</span>
             </span>
           </div>
 
@@ -212,18 +209,18 @@ const POSPage = () => {
               className="flex items-center gap-1.5 text-slate-600 hover:text-slate-900 font-extrabold text-base transition-colors py-1 cursor-pointer"
             >
               <ArrowLeft className="w-5 h-5" />
-              <span>Back</span>
+              <span>{t('cancel')}</span>
             </button>
 
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mt-2">
-              Payment
+              {t('payment')}
             </h1>
           </div>
 
           {/* Total Amount Card */}
           <div className="bg-white border border-slate-200/90 rounded-3xl p-6 md:p-8 shadow-xs text-center space-y-1">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              TOTAL
+              {t('total')}
             </p>
             <p className="text-4xl md:text-5xl font-black text-emerald-600 tracking-tight">
               ₹{total}
@@ -245,7 +242,7 @@ const POSPage = () => {
                 <Banknote className="w-6 h-6 stroke-[2.2]" />
               </div>
               <span className="font-extrabold text-xs md:text-sm text-slate-900 tracking-wide">
-                CASH
+                {t('cash')}
               </span>
             </button>
 
@@ -262,7 +259,7 @@ const POSPage = () => {
                 <Smartphone className="w-6 h-6 stroke-[2.2]" />
               </div>
               <span className="font-extrabold text-xs md:text-sm text-emerald-950 tracking-wide">
-                UPI
+                {t('upi')}
               </span>
             </button>
 
@@ -279,7 +276,7 @@ const POSPage = () => {
                 <CreditCard className="w-6 h-6 stroke-[2.2]" />
               </div>
               <span className="font-extrabold text-xs md:text-sm text-slate-900 tracking-wide">
-                CARD
+                {t('card')}
               </span>
             </button>
           </div>
@@ -289,7 +286,7 @@ const POSPage = () => {
             onClick={handleCompleteSale}
             className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-lg md:text-xl rounded-2xl shadow-md shadow-emerald-600/30 transition-all cursor-pointer"
           >
-            Complete Sale
+            {t('completeSale')}
           </button>
         </div>
       )}
@@ -304,153 +301,123 @@ const POSPage = () => {
             </h1>
 
             <button
-              onClick={resetSale}
-              className="text-sm font-semibold text-rose-300 hover:text-rose-500 transition-colors cursor-pointer"
+              type="button"
+              onClick={() => setActiveTab('cartDrawer')}
+              className="relative p-2 text-slate-700 hover:bg-slate-100 rounded-2xl transition-colors cursor-pointer"
             >
-              Clear
+              <ShoppingCart className="w-6 h-6 stroke-[2.2]" />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 bg-emerald-600 text-white font-extrabold text-[10px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">
+                  {totalItems}
+                </span>
+              )}
             </button>
           </div>
 
-          {/* TWO LARGE ACTION CARDS */}
+          {/* TWO PRIMARY BIG POS ACTION CARDS */}
           <POSActionCards
-            onOpenScan={() => setActiveTab('scan')}
-            onToggleSearch={() => {
-              const nextState = !showSearch;
-              setShowSearch(nextState);
-              if (nextState) {
-                setTimeout(() => {
-                  const el = document.getElementById('posSearchInput');
-                  if (el) el.focus();
-                }, 100);
-              }
-            }}
+            onScanClick={() => setActiveTab('scan')}
+            onSearchClick={() => setShowSearch((prev) => !prev)}
             isSearchOpen={showSearch}
           />
 
-          {/* TOGGLED SEARCH SECTION */}
+          {/* TOGGLEABLE IN-PAGE SEARCH & PRODUCT CATALOG LIST */}
           {showSearch && (
-            <div className="space-y-4 transition-all duration-300 animate-fadeIn">
-              {/* IN-PAGE SEARCH INPUT BAR */}
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-4 md:p-5 shadow-xs space-y-4 animate-fadeIn">
+              {/* Search Bar Input */}
               <div className="relative">
-                <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
+                <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400 stroke-[2.2]" />
                 <input
-                  id="posSearchInput"
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search product name..."
-                  className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-emerald-500 rounded-2xl text-base font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs placeholder:text-slate-300"
+                  placeholder={t('searchPlaceholder')}
+                  className="w-full pl-11 pr-4 py-3 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
                 />
               </div>
 
-              {/* IN-PAGE PRODUCT CATALOG LIST */}
-              <div className="bg-white border border-slate-200/90 rounded-3xl overflow-hidden shadow-xs divide-y divide-slate-100">
-                {filteredProducts.length === 0 ? (
-                  <p className="text-center py-6 text-slate-400 font-extrabold text-sm">
-                    No products match your search
-                  </p>
-                ) : (
-                  filteredProducts.map((p) => (
-                    <div
-                      key={p.id}
-                      onClick={() => addToCartFromSearch(p)}
-                      className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer"
-                    >
-                      <div>
-                        <h3 className="font-extrabold text-slate-900 text-base">{p.name}</h3>
-                        <p className="text-xs text-slate-400 font-semibold mt-0.5">
-                          {p.barcode} · Stock: {p.stock} {p.unit}
-                        </p>
-                      </div>
-
-                      <div className="text-right">
-                        <span className="font-black text-emerald-600 text-lg md:text-xl">
-                          ₹{p.sellingPrice}
-                        </span>
-                      </div>
+              {/* Product Catalog Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+                {filteredProducts.map((product) => (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => addToCartFromSearch(product)}
+                    className="p-3.5 rounded-2xl border border-slate-200/90 bg-white hover:bg-slate-50 flex items-center justify-between text-left transition-all active:scale-[0.98] cursor-pointer group"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <p className="font-extrabold text-slate-900 text-sm truncate">
+                        {product.name}
+                      </p>
+                      <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                        ₹{product.sellingPrice} · <span className="text-slate-400 font-normal">{t('stock')}: {product.stock}</span>
+                      </p>
                     </div>
-                  ))
-                )}
+
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                      <Plus className="w-4 h-4 stroke-[2.5]" />
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
-          {/* SCAN BARCODE FULL-SCREEN DARK MODAL PORTAL */}
+          {/* HARDWARE SCANNER PORTAL */}
           {activeTab === 'scan' &&
             createPortal(
-              <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[99999] w-screen h-screen min-h-screen bg-black text-white p-5 flex flex-col justify-between overflow-y-auto m-0 border-0">
-                {/* Top Header */}
-                <div className="flex items-center justify-between pt-2">
-                  <div className="flex items-center gap-2.5 text-white font-extrabold text-xl">
-                    <Camera className="w-6 h-6 stroke-[2.3]" />
-                    <span>Scan Barcode</span>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab('menu')}
-                    className="w-11 h-11 bg-slate-800 hover:bg-slate-700 text-white rounded-full flex items-center justify-center transition-colors cursor-pointer"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-
-                {/* Red Alert Banner */}
-                <div className="bg-red-600 text-white font-extrabold rounded-2xl p-4 text-sm leading-snug my-2 shadow-md">
-                  Camera access blocked. Use manual entry or simulate.
-                </div>
-
-                {/* Viewfinder Camera Box with Laser Scan Effect */}
-                <div className="my-auto space-y-4">
-                  <div className="border-2 border-slate-800 rounded-3xl relative overflow-hidden h-64 flex flex-col items-center justify-center bg-slate-950 shadow-2xl">
-                    {/* Green Laser Scan Line */}
-                    <div className="w-full h-1 bg-emerald-400 shadow-[0_0_15px_#10b981] absolute top-3 left-0 animate-pulse" />
-
-                    {/* Corner Brackets */}
-                    <div className="absolute top-4 left-4 w-7 h-7 border-t-4 border-l-4 border-emerald-400 rounded-tl-xl" />
-                    <div className="absolute top-4 right-4 w-7 h-7 border-t-4 border-r-4 border-emerald-400 rounded-tr-xl" />
-                    <div className="absolute bottom-4 left-4 w-7 h-7 border-b-4 border-l-4 border-emerald-400 rounded-bl-xl" />
-                    <div className="absolute bottom-4 right-4 w-7 h-7 border-b-4 border-r-4 border-emerald-400 rounded-br-xl" />
-
-                    <form onSubmit={handleHardwareScanSubmit} className="w-full max-w-xs px-4 space-y-2 z-10 text-center">
-                      <input
-                        ref={scannerInputRef}
-                        type="text"
-                        value={hardwareBarcodeInput}
-                        onChange={(e) => setHardwareBarcodeInput(e.target.value)}
-                        placeholder="Scan with machine gun..."
-                        className="w-full p-3 bg-slate-900/90 border border-emerald-500/80 rounded-xl text-center font-mono font-bold text-white text-base focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                      />
-                    </form>
-                  </div>
-
-                  <div className="flex items-center justify-center gap-2 text-white font-extrabold text-sm text-center">
-                    <Scan className="w-5 h-5 text-emerald-400" />
-                    <span>Point your camera at the barcode</span>
-                  </div>
-                </div>
-
-                {/* Bottom Simulation Controls */}
-                <div className="flex items-center gap-3 pt-2 pb-4">
+              <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[99999] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-5 my-auto relative animate-fadeIn text-center">
                   <button
                     type="button"
-                    onClick={() => handleScanProduct('8901234567890')}
-                    className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-lg rounded-2xl shadow-lg shadow-emerald-600/30 text-center transition-all cursor-pointer"
+                    onClick={() => setActiveTab('menu')}
+                    className="absolute top-4 right-4 w-9 h-9 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors cursor-pointer"
                   >
-                    Simulate Scan
+                    <X className="w-5 h-5" />
                   </button>
 
+                  <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto border border-emerald-200">
+                    <Scan className="w-8 h-8 stroke-[2.2]" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-extrabold text-slate-900">
+                      {t('scanBarcode')}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-semibold">
+                      Point USB/Bluetooth scanner gun or enter barcode manually
+                    </p>
+                  </div>
+
+                  {/* Hardware Scanner Form */}
+                  <form onSubmit={handleHardwareScanSubmit} className="space-y-3">
+                    <input
+                      ref={scannerInputRef}
+                      type="text"
+                      value={hardwareBarcodeInput}
+                      onChange={(e) => setHardwareBarcodeInput(e.target.value)}
+                      placeholder="e.g. 8901234567890"
+                      className="w-full p-4 bg-slate-50 border-2 border-emerald-500 rounded-2xl text-center text-lg font-black font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-sm"
+                    />
+
+                    <button
+                      type="submit"
+                      className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-sm rounded-2xl shadow-md transition-all cursor-pointer"
+                    >
+                      {t('addProduct')}
+                    </button>
+                  </form>
+
+                  {/* Demo Simulation Barcode Button */}
                   <button
                     type="button"
                     onClick={() => {
-                      setActiveTab('menu');
-                      setShowSearch(true);
-                      setTimeout(() => {
-                        const el = document.getElementById('posSearchInput');
-                        if (el) el.focus();
-                      }, 100);
+                      setHardwareBarcodeInput('8901234567890');
+                      handleScanProduct('8901234567890');
                     }}
-                    className="w-16 h-14 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl flex items-center justify-center transition-colors cursor-pointer"
+                    className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all cursor-pointer"
                   >
-                    <Keyboard className="w-6 h-6" />
+                    Simulate Demo Scan (Maggi 70g)
                   </button>
                 </div>
               </div>,
@@ -473,7 +440,7 @@ const POSPage = () => {
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
                     <h3 className="font-extrabold text-slate-900 text-lg flex items-center gap-2">
                       <ShoppingCart className="w-5 h-5 text-slate-900 stroke-[2.2]" />
-                      <span>Cart <span className="text-slate-400 font-medium">({totalItems})</span></span>
+                      <span>{t('cart')} <span className="text-slate-400 font-medium">({totalItems})</span></span>
                     </h3>
                     <button
                       onClick={() => setActiveTab('menu')}
@@ -487,7 +454,7 @@ const POSPage = () => {
                   <div className="flex-1 overflow-y-auto py-2 pr-1 max-h-[35vh]">
                     {cart.length === 0 ? (
                       <p className="text-center py-10 text-slate-400 font-extrabold text-base tracking-wide">
-                        Nothing here yet
+                        {t('empty')}
                       </p>
                     ) : (
                       <div className="divide-y divide-slate-100">
@@ -538,17 +505,17 @@ const POSPage = () => {
                   {/* STICKY FOOTER WITH PROCEED TO PAYMENT BUTTON */}
                   <div className="pt-3 border-t border-slate-100 space-y-2 bg-white shrink-0">
                     <div className="flex justify-between text-sm font-semibold text-slate-500">
-                      <span>Subtotal</span>
+                      <span>{t('subtotal')}</span>
                       <span className="font-extrabold text-slate-900">₹{subtotal}</span>
                     </div>
 
                     <div className="flex justify-between text-sm font-semibold text-slate-500">
-                      <span>Discount</span>
+                      <span>{t('discount')}</span>
                       <span className="font-extrabold text-slate-900">₹{discount}</span>
                     </div>
 
                     <div className="flex justify-between items-center text-lg font-extrabold text-slate-900 pt-2 border-t border-slate-100">
-                      <span>Total</span>
+                      <span>{t('total')}</span>
                       <span className="text-emerald-600 text-3xl font-black tracking-tight">₹{total}</span>
                     </div>
 

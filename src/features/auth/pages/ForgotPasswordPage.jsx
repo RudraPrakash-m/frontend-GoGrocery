@@ -29,26 +29,26 @@ const ForgotPasswordPage = () => {
   const handleSendResetOtp = (e) => {
     e.preventDefault();
     if (!identifier.trim()) {
-      toast.error('Please enter your Shop Code or Email');
+      toast.error(t('enterShopCodeOrEmailError'));
       return;
     }
-    toast.info(`Reset OTP 1234 sent to registered email for ${identifier}`);
+    toast.info(t('otpSentInfo'));
     setStep(2);
   };
 
   const handleResetPin = (e) => {
     e.preventDefault();
     if (otp !== '1234' && otp.length < 4) {
-      toast.error('Please enter valid 4-digit OTP (demo: 1234)');
+      toast.error(t('enterValidOtpError'));
       return;
     }
 
     if (newPin !== confirmNewPin) {
-      toast.error(t('pinMismatch') || 'PIN and Confirm PIN do not match!');
+      toast.error(t('pinMismatch'));
       return;
     }
 
-    toast.success('Security PIN reset successfully!');
+    toast.success(t('pinUpdatedSuccess'));
     setStep(3);
   };
 
@@ -125,7 +125,7 @@ const ForgotPasswordPage = () => {
               <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs space-y-0.5">
                 <p className="font-extrabold text-emerald-800 flex items-center gap-1.5">
                   <Mail className="w-4 h-4 text-emerald-600" />
-                  <span>Reset Code Sent</span>
+                  <span>Email OTP Sent</span>
                 </p>
                 <p className="text-slate-600 font-semibold">
                   OTP sent to email registered for <strong className="text-slate-900">{identifier}</strong>.

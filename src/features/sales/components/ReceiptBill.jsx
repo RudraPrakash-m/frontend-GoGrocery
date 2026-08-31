@@ -1,7 +1,10 @@
 import React from 'react';
-import { Printer, Share2, CheckCircle2, ShoppingBag } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Printer, Share2, ShoppingBag } from 'lucide-react';
 
 const ReceiptBill = ({ invoice, onNewSale, onClose }) => {
+  const { t } = useTranslation();
+
   if (!invoice) return null;
 
   const {
@@ -34,13 +37,13 @@ const ReceiptBill = ({ invoice, onNewSale, onClose }) => {
       {/* Printable Thermal Paper Receipt Card */}
       <div id="printableReceipt" className="bg-white rounded-2xl p-6 shadow-md border border-slate-200 font-mono text-slate-800 space-y-4 text-xs">
         {/* Receipt Header */}
-        <div className="text-center space-y-1 pb-3 border-b border-dashed border-slate-300">
+        <div className="text-center space-y-1 pb-3 border-b border-dashed border-slate-300 font-sans">
           <img
             src="/logo.png"
             alt="Logo"
             className="w-12 h-12 object-contain mx-auto mb-1"
           />
-          <h2 className="text-xl font-black uppercase text-slate-900 tracking-tight font-sans">
+          <h2 className="text-xl font-black uppercase text-slate-900 tracking-tight">
             {storeName}
           </h2>
           <p className="text-[11px] font-medium text-slate-500">{address}</p>
@@ -48,31 +51,31 @@ const ReceiptBill = ({ invoice, onNewSale, onClose }) => {
         </div>
 
         {/* Bill Meta Info */}
-        <div className="flex justify-between items-center py-1 text-[11px] font-semibold border-b border-dashed border-slate-300 pb-3">
+        <div className="flex justify-between items-center py-1 text-[11px] font-semibold border-b border-dashed border-slate-300 pb-3 font-sans">
           <div>
-            <p className="text-slate-500">Invoice: <span className="text-slate-900 font-bold">{invoiceNo}</span></p>
+            <p className="text-slate-500">{t('invoiceNo')}: <span className="text-slate-900 font-bold">{invoiceNo}</span></p>
             <p className="text-slate-500">{date} · {time}</p>
           </div>
           <div className="text-right">
             <span className="inline-block px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px] uppercase">
-              {paymentMode} PAID
+              {paymentMode} {t('paid') || 'PAID'}
             </span>
           </div>
         </div>
 
         {/* Itemized Table */}
-        <div className="space-y-2 py-1">
+        <div className="space-y-2 py-1 font-sans">
           <div className="grid grid-cols-12 font-extrabold uppercase text-[10px] text-slate-400 border-b border-slate-200 pb-1">
-            <span className="col-span-6">Item</span>
-            <span className="col-span-2 text-center">Qty</span>
-            <span className="col-span-2 text-right">Rate</span>
-            <span className="col-span-2 text-right">Amt</span>
+            <span className="col-span-6">{t('itemHeader')}</span>
+            <span className="col-span-2 text-center">{t('qtyHeader')}</span>
+            <span className="col-span-2 text-right">{t('rateHeader')}</span>
+            <span className="col-span-2 text-right">{t('amtHeader')}</span>
           </div>
 
           <div className="divide-y divide-slate-100 space-y-1.5 pt-1">
             {items.map((item, idx) => (
               <div key={idx} className="grid grid-cols-12 text-[11px] font-bold text-slate-800 pt-1">
-                <span className="col-span-6 truncate font-sans text-slate-900">{item.name}</span>
+                <span className="col-span-6 truncate text-slate-900">{item.name}</span>
                 <span className="col-span-2 text-center">{item.qty}</span>
                 <span className="col-span-2 text-right">₹{item.price}</span>
                 <span className="col-span-2 text-right text-emerald-700">₹{item.price * item.qty}</span>
@@ -82,27 +85,27 @@ const ReceiptBill = ({ invoice, onNewSale, onClose }) => {
         </div>
 
         {/* Total Summary */}
-        <div className="pt-3 border-t border-dashed border-slate-300 space-y-1.5">
+        <div className="pt-3 border-t border-dashed border-slate-300 space-y-1.5 font-sans">
           <div className="flex justify-between text-[11px] font-medium text-slate-500">
-            <span>Subtotal</span>
+            <span>{t('subtotal')}</span>
             <span>₹{subtotal}</span>
           </div>
           {discount > 0 && (
             <div className="flex justify-between text-[11px] font-medium text-rose-500">
-              <span>Discount</span>
+              <span>{t('discount')}</span>
               <span>-₹{discount}</span>
             </div>
           )}
           <div className="flex justify-between text-base font-black text-slate-900 pt-2 border-t border-slate-200">
-            <span>TOTAL BILL</span>
-            <span className="text-emerald-600 font-sans text-xl">₹{total}</span>
+            <span>{t('totalBill')}</span>
+            <span className="text-emerald-600 text-xl font-extrabold">₹{total}</span>
           </div>
         </div>
 
         {/* Footer & Barcode */}
-        <div className="text-center pt-4 border-t border-dashed border-slate-300 space-y-2">
+        <div className="text-center pt-4 border-t border-dashed border-slate-300 space-y-2 font-sans">
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            *** Thank you for shopping at {storeName}! ***
+            *** {t('thankYouShopping')} {storeName}! ***
           </p>
           <div className="bg-slate-100 p-2 rounded-xl inline-block mx-auto">
             {/* Visual Barcode Graphic */}
@@ -128,7 +131,7 @@ const ReceiptBill = ({ invoice, onNewSale, onClose }) => {
           className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white font-extrabold text-sm rounded-2xl shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
         >
           <Printer className="w-4 h-4" />
-          <span>Print Thermal Receipt</span>
+          <span>{t('printThermalReceipt')}</span>
         </button>
 
         <button
@@ -137,7 +140,7 @@ const ReceiptBill = ({ invoice, onNewSale, onClose }) => {
           className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-sm rounded-2xl shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
         >
           <Share2 className="w-4 h-4" />
-          <span>Share Bill on WhatsApp</span>
+          <span>{t('shareWhatsApp')}</span>
         </button>
 
         {onNewSale && (
@@ -147,7 +150,7 @@ const ReceiptBill = ({ invoice, onNewSale, onClose }) => {
             className="w-full py-3.5 bg-white hover:bg-slate-50 active:scale-[0.99] text-slate-900 font-extrabold text-sm rounded-2xl border border-slate-200 shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             <ShoppingBag className="w-4 h-4 text-emerald-600" />
-            <span>Start New Sale</span>
+            <span>{t('startNewSale')}</span>
           </button>
         )}
 
@@ -157,7 +160,7 @@ const ReceiptBill = ({ invoice, onNewSale, onClose }) => {
             onClick={onClose}
             className="w-full py-3 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm rounded-2xl border border-slate-200 transition-all cursor-pointer"
           >
-            Close Receipt
+            {t('closeReceipt')}
           </button>
         )}
       </div>

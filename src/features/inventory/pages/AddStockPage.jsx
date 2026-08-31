@@ -1,73 +1,67 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
-  Camera,
+  Scan,
+  PlusCircle,
+  Search,
   CheckCircle,
-  Minus,
-  Plus,
-  Printer,
+  Package,
   ArrowLeft,
-  Barcode,
+  X,
+  Printer,
   Sparkles,
+  Barcode,
 } from 'lucide-react';
 import { INITIAL_PRODUCTS } from '../../../constants/mockProducts';
-import { inventoryService } from '../services/inventoryService';
-import InventoryActionCards from '../components/InventoryActionCards';
-import BarcodePreviewCard from '../components/BarcodePreviewCard';
 
 const AddStockPage = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('menu'); // 'menu', 'scan', 'create'
-
+  const [activeTab, setActiveTab] = useState('menu'); // 'menu', 'scanExisting', 'createProductModal'
   const [products, setProducts] = useState(INITIAL_PRODUCTS);
 
-  const [scannedBarcode, setScannedBarcode] = useState('');
+  // Search Existing Product for Quick Restock
+  const [searchQuery, setSearchQuery] = useState('');
   const [foundProduct, setFoundProduct] = useState(null);
-  const [qtyToAdd, setQtyToAdd] = useState(10);
+  const [quantityToAdd, setQuantityToAdd] = useState(10);
   const [stockUpdateSuccess, setStockUpdateSuccess] = useState(null);
 
+  // Create Barcode & Add New Product State
+  const [generatedBarcode, setGeneratedBarcode] = useState(null);
   const [productName, setProductName] = useState('');
-  const [category, setCategory] = useState('Vegetables');
-  const [purchasePrice, setPurchasePrice] = useState('');
+  const [category, setCategory] = useState('Grocery');
   const [sellingPrice, setSellingPrice] = useState('');
-  const [unit, setUnit] = useState('Kg');
+  const [purchasePrice, setPurchasePrice] = useState('');
+  const [unit, setUnit] = useState('Pcs');
   const [initialQty, setInitialQty] = useState('10');
-
-  const [generatedBarcode, setGeneratedBarcode] = useState(null); // Initially null until user clicks Generate Barcode
   const [createSuccess, setCreateSuccess] = useState(false);
 
-  const simulateScanResult = (barcodeToScan) => {
-    setScannedBarcode(barcodeToScan);
-
-    const matched = products.find((p) => p.barcode === barcodeToScan);
-    if (matched) {
-      setFoundProduct(matched);
-      setQtyToAdd(10);
-    } else {
-      setFoundProduct(null);
-    }
+  // Quick Restock Logic
+  const handleSelectProductToRestock = (product) => {
+    setFoundProduct(product);
+    setQuantityToAdd(10);
   };
 
-  const handleConfirmAddStock = () => {
+  const handleUpdateStockSubmit = (e) => {
+    e.preventDefault();
     if (!foundProduct) return;
 
+    const addedAmount = parseInt(quantityToAdd, 10) || 0;
     const prevStock = foundProduct.stock;
-    const addedAmount = parseInt(qtyToAdd, 10) || 1;
     const newStockAmount = prevStock + addedAmount;
 
     setProducts((prev) =>
       prev.map((p) => (p.id === foundProduct.id ? { ...p, stock: newStockAmount } : p))
     );
 
-    const msg = `Stock updated: +${addedAmount} ${foundProduct.unit} for ${foundProduct.name}`;
     setStockUpdateSuccess({
       productName: foundProduct.name,
       previousStock: prevStock,
       added: addedAmount,
       newStock: newStockAmount,
     });
-    toast.success(msg);
+    toast.success(t('stockUpdated'));
 
     setFoundProduct(null);
     setTimeout(() => {
@@ -79,7 +73,7 @@ const AddStockPage = () => {
   const handleGenerateBarcode = () => {
     const uniqueCode = `890${Math.floor(1000000000 + Math.random() * 9000000000)}`;
     setGeneratedBarcode(uniqueCode);
-    toast.info(`Generated Barcode: ${uniqueCode}`);
+    toast.info(`${t('generatedBarcodeInfo')}: ${uniqueCode}`);
   };
 
   const handleSaveGeneratedProduct = () => {
@@ -101,323 +95,383 @@ const AddStockPage = () => {
     setProducts((prev) => [newProd, ...prev]);
     setCreateSuccess(true);
 
-    toast.success(`Product "${nameToSave}" (${codeToSave}) saved to catalog!`);
+    toast.success(t('productSavedSuccess'));
 
     setTimeout(() => {
       setCreateSuccess(false);
       setActiveTab('menu');
       setGeneratedBarcode(null);
       setProductName('');
-      setPurchasePrice('');
       setSellingPrice('');
-    }, 1800);
+      setPurchasePrice('');
+    }, 2000);
   };
 
+  const searchFilteredProducts = products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.barcode.includes(searchQuery)
+  );
+
   return (
-    <div className="max-w-xl mx-auto space-y-6 pb-20 relative">
-      {/* MENU VIEW */}
-      {activeTab === 'menu' && (
-        <div className="space-y-6">
-          <div className="pt-1">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-              {t('addStock')}
-            </h1>
-          </div>
+    <div className="max-w-xl mx-auto space-y-6 relative pb-20">
+      {/* Title */}
+      <div className="pt-1">
+        <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+          {t('addStock')}
+        </h1>
+      </div>
 
-          <InventoryActionCards
-            onSelectScan={() => setActiveTab('scan')}
-            onSelectCreate={() => {
-              setActiveTab('create');
-              setGeneratedBarcode(null);
-            }}
-          />
+      {/* Stock Update Toast Success Banner */}
+      {stockUpdateSuccess && (
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-1 shadow-sm animate-fadeIn">
+          <div className="flex items-center gap-2 font-extrabold text-sm text-emerald-800">
+            <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>{t('stockUpdated')}</span>
+          </div>
+          <p className="text-xs font-semibold text-slate-700">
+            {stockUpdateSuccess.productName}: {t('previousStock')} <strong>{stockUpdateSuccess.previousStock}</strong> → {t('added')} <strong className="text-emerald-700">+{stockUpdateSuccess.added}</strong> → {t('newStock')} <strong>{stockUpdateSuccess.newStock}</strong>
+          </p>
         </div>
       )}
 
-      {/* SCAN BARCODE FLOW */}
-      {activeTab === 'scan' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <button
-              onClick={() => setActiveTab('menu')}
-              className="flex items-center gap-1.5 text-sm font-bold text-slate-600 hover:text-slate-900 cursor-pointer"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-            <h3 className="font-extrabold text-slate-900 text-base">{t('scanBarcode')}</h3>
+      {/* TWO HERO INVENTORY CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Card 1: Restock Existing Stock */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('scanExisting')}
+          className="bg-white border-2 border-slate-200/90 hover:border-emerald-500 rounded-3xl p-6 shadow-xs hover:shadow-md transition-all text-left flex flex-col justify-between space-y-4 group cursor-pointer"
+        >
+          <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center border border-emerald-100 group-hover:scale-105 transition-transform">
+            <Scan className="w-7 h-7 stroke-[2.2]" />
           </div>
 
-          {stockUpdateSuccess && (
-            <div className="p-5 rounded-2xl bg-emerald-50 border-2 border-emerald-300 text-emerald-950 font-bold space-y-1 shadow-sm">
-              <div className="flex items-center gap-2 text-emerald-700 text-base font-extrabold">
-                <CheckCircle className="w-6 h-6 text-emerald-600" />
-                <span>✓ {t('stockUpdated')} ({stockUpdateSuccess.productName})</span>
-              </div>
-              <div className="text-xs text-slate-600 flex gap-4 pt-1 font-mono">
-                <span>{t('previousStock')}: <strong>{stockUpdateSuccess.previousStock}</strong></span>
-                <span>{t('added')}: <strong className="text-emerald-700">+{stockUpdateSuccess.added}</strong></span>
-                <span>{t('newStock')}: <strong className="text-emerald-900">{stockUpdateSuccess.newStock}</strong></span>
-              </div>
-            </div>
-          )}
-
-          <div className="text-center space-y-3">
-            <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto border border-emerald-100 shadow-inner">
-              <Camera className="w-10 h-10" />
-            </div>
-            <p className="text-xs md:text-sm text-slate-500 font-medium">{t('pointCamera')}</p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider text-center">
-              Demo Scanner Controls
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => simulateScanResult('8901234567890')}
-                className="py-2.5 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 cursor-pointer"
-              >
-                Scan Maggi 70g
-              </button>
-              <button
-                type="button"
-                onClick={() => simulateScanResult('8901234512340')}
-                className="py-2.5 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 cursor-pointer"
-              >
-                Scan Amul Milk 1L
-              </button>
-            </div>
-          </div>
-
-          {foundProduct && (
-            <div className="p-6 rounded-2xl bg-emerald-50/70 border-2 border-emerald-300 space-y-5">
-              <div className="flex items-center justify-between border-b border-emerald-200/80 pb-3">
-                <span className="font-extrabold text-emerald-800 text-base flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-emerald-600" />
-                  <span>{t('productFound')} ✓</span>
-                </span>
-                <span className="text-xs font-mono font-bold text-emerald-900 bg-white px-2.5 py-1 rounded-lg border border-emerald-200">
-                  {foundProduct.barcode}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase">{t('productName')}</p>
-                  <p className="text-sm font-extrabold text-slate-900 mt-1">{foundProduct.name}</p>
-                </div>
-                <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase">{t('currentStock')}</p>
-                  <p className="text-sm font-extrabold text-emerald-700 mt-1">
-                    {foundProduct.stock} {foundProduct.unit}
-                  </p>
-                </div>
-                <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase">{t('sellingPrice')}</p>
-                  <p className="text-sm font-extrabold text-slate-900 mt-1">₹{foundProduct.sellingPrice}</p>
-                </div>
-              </div>
-
-              <div className="space-y-2 pt-2">
-                <label className="block text-xs font-extrabold uppercase text-slate-600 text-center">
-                  {t('quantityToAdd')}
-                </label>
-
-                <div className="flex items-center justify-center gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setQtyToAdd((q) => Math.max(1, q - 1))}
-                    className="w-12 h-12 rounded-xl bg-white border-2 border-slate-200 text-slate-800 font-extrabold text-xl flex items-center justify-center shadow-xs cursor-pointer"
-                  >
-                    <Minus className="w-5 h-5" />
-                  </button>
-
-                  <span className="text-3xl font-black text-slate-900 w-16 text-center">
-                    {qtyToAdd}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={() => setQtyToAdd((q) => q + 1)}
-                    className="w-12 h-12 rounded-xl bg-white border-2 border-slate-200 text-slate-800 font-extrabold text-xl flex items-center justify-center shadow-xs cursor-pointer"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleConfirmAddStock}
-                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-lg shadow-md transition-all cursor-pointer"
-              >
-                Add Stock (+{qtyToAdd})
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TAB 2: CREATE BARCODE & ADD PRODUCT */}
-      {activeTab === 'create' && (
-        <div className="space-y-5">
           <div>
-            <button
-              type="button"
-              onClick={() => setActiveTab('menu')}
-              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-bold text-base transition-colors py-1 cursor-pointer"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight mt-2 leading-tight">
+            <h3 className="font-extrabold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">
+              Quick Restock Stock
+            </h3>
+            <p className="text-xs text-slate-500 font-semibold mt-1">
+              Scan barcode or search existing product to add quantity
+            </p>
+          </div>
+        </button>
+
+        {/* Card 2: Create Barcode & Add New Product */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('createProductModal');
+            handleGenerateBarcode();
+          }}
+          className="bg-emerald-600 hover:bg-emerald-700 rounded-3xl p-6 shadow-md shadow-emerald-600/20 transition-all text-left flex flex-col justify-between space-y-4 group cursor-pointer text-white"
+        >
+          <div className="w-14 h-14 bg-white/20 text-white rounded-2xl flex items-center justify-center backdrop-blur-xs group-hover:scale-105 transition-transform border border-white/30">
+            <PlusCircle className="w-7 h-7 stroke-[2.2]" />
+          </div>
+
+          <div>
+            <h3 className="font-extrabold text-white text-lg tracking-tight">
               Create Barcode & Add Product
-            </h1>
+            </h3>
+            <p className="text-xs text-emerald-100 font-medium mt-1">
+              Generate unique 13-digit EAN barcode and save new item
+            </p>
           </div>
+        </button>
+      </div>
 
-          {createSuccess && (
-            <div className="p-4 rounded-2xl bg-emerald-100 border border-emerald-300 text-emerald-900 font-bold text-sm flex items-center gap-2 animate-pulse">
-              <CheckCircle className="w-5 h-5 text-emerald-600" />
-              <span>✓ Product and unique barcode saved to catalog!</span>
-            </div>
-          )}
-
-          {/* Form Inputs Container */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-xs space-y-4">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-extrabold uppercase text-slate-600">
-                {t('productName')}
-              </label>
-              <input
-                type="text"
-                required
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-                placeholder="e.g. Potato 1kg"
-                className="w-full p-3.5 bg-white border border-slate-200 rounded-2xl text-base font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-extrabold uppercase text-slate-600">
-                {t('category')}
-              </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full p-3.5 bg-white border border-slate-200 rounded-2xl text-base font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
+      {/* QUICK RESTOCK SEARCH & SELECTION MODAL PORTAL */}
+      {activeTab === 'scanExisting' &&
+        createPortal(
+          <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[99999] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-5 my-auto relative animate-fadeIn">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('menu');
+                  setFoundProduct(null);
+                }}
+                className="absolute top-4 right-4 w-9 h-9 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors cursor-pointer"
               >
-                <option value="Vegetables">Vegetables</option>
-                <option value="Pulses">Pulses</option>
-                <option value="Staples">Staples</option>
-                <option value="Snacks">Snacks</option>
-                <option value="Dairy">Dairy</option>
-              </select>
-            </div>
+                <X className="w-5 h-5" />
+              </button>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs font-extrabold uppercase text-slate-600">
-                {t('unit')}
-              </label>
-              <select
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                className="w-full p-3.5 bg-white border border-slate-200 rounded-2xl text-base font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
-              >
-                <option value="Kg">Kg</option>
-                <option value="Gram">Gram</option>
-                <option value="Piece">Piece</option>
-                <option value="Litre">Litre</option>
-                <option value="Pack">Pack</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-extrabold uppercase text-slate-600">
-                  {t('purchasePrice')}
-                </label>
-                <input
-                  type="number"
-                  value={purchasePrice}
-                  onChange={(e) => setPurchasePrice(e.target.value)}
-                  placeholder="20"
-                  className="w-full p-3.5 bg-white border border-slate-200 rounded-2xl text-base font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
-                />
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
+                  <Scan className="w-5 h-5 stroke-[2.2]" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-base">Quick Restock Product</h3>
+                  <p className="text-xs text-slate-500 font-semibold">Search by name or scan barcode</p>
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-extrabold uppercase text-slate-600">
-                  {t('sellingPrice')}
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={sellingPrice}
-                  onChange={(e) => setSellingPrice(e.target.value)}
-                  placeholder="30"
-                  className="w-full p-3.5 bg-white border border-slate-200 rounded-2xl text-base font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
-                />
+              {!foundProduct ? (
+                <div className="space-y-4">
+                  <div className="relative">
+                    <Search className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder={t('searchPlaceholder')}
+                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+                    />
+                  </div>
+
+                  <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto pr-1">
+                    {searchFilteredProducts.map((prod) => (
+                      <button
+                        key={prod.id}
+                        type="button"
+                        onClick={() => handleSelectProductToRestock(prod)}
+                        className="w-full py-3 px-2 flex items-center justify-between text-left hover:bg-slate-50 rounded-xl transition-colors cursor-pointer"
+                      >
+                        <div>
+                          <p className="font-extrabold text-slate-900 text-sm">{prod.name}</p>
+                          <p className="text-xs text-slate-500 font-semibold">
+                            {t('barcode')}: {prod.barcode}
+                          </p>
+                        </div>
+                        <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
+                          {t('stock')}: {prod.stock} {prod.unit}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleUpdateStockSubmit} className="space-y-4 animate-fadeIn">
+                  <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-extrabold text-slate-900 text-base">{foundProduct.name}</h4>
+                        <p className="text-xs text-slate-500 font-semibold">{t('barcode')}: {foundProduct.barcode}</p>
+                      </div>
+                      <span className="text-xs font-black text-emerald-800 bg-emerald-200/80 px-2.5 py-1 rounded-md">
+                        {t('currentStock')}: {foundProduct.stock} {foundProduct.unit}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-extrabold uppercase text-slate-700">
+                      {t('quantityToAdd')} ({foundProduct.unit})
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={quantityToAdd}
+                      onChange={(e) => setQuantityToAdd(e.target.value)}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-black text-lg text-center focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setFoundProduct(null)}
+                      className="w-1/2 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl cursor-pointer"
+                    >
+                      {t('cancel')}
+                    </button>
+
+                    <button
+                      type="submit"
+                      className="w-1/2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl shadow-md cursor-pointer"
+                    >
+                      {t('save')}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* CREATE BARCODE & ADD NEW PRODUCT MODAL PORTAL */}
+      {activeTab === 'createProductModal' &&
+        createPortal(
+          <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[99999] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-5 my-auto relative animate-fadeIn">
+              <button
+                type="button"
+                onClick={() => setActiveTab('menu')}
+                className="absolute top-4 right-4 w-9 h-9 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
+                  <Sparkles className="w-5 h-5 stroke-[2.2]" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-base">{t('createBarcode')}</h3>
+                  <p className="text-xs text-slate-500 font-semibold">Generate 13-digit barcode & add product</p>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs font-extrabold uppercase text-slate-600">
-                {t('initialQuantity')}
-              </label>
-              <input
-                type="number"
-                required
-                value={initialQty}
-                onChange={(e) => setInitialQty(e.target.value)}
-                className="w-full p-3.5 bg-white border border-slate-200 rounded-2xl text-base font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
-              />
-            </div>
-          </div>
-
-          {/* Generate Barcode Button */}
-          {!generatedBarcode ? (
-            <button
-              type="button"
-              onClick={handleGenerateBarcode}
-              className="w-full py-4 bg-indigo-500 hover:bg-indigo-600 active:scale-[0.99] text-white font-extrabold text-lg md:text-xl rounded-2xl shadow-md shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              <Sparkles className="w-5 h-5 text-indigo-200" />
-              <span>Generate Barcode</span>
-            </button>
-          ) : (
-            <div className="space-y-4">
-              {/* Generated Barcode Visual Card */}
-              <BarcodePreviewCard barcode={generatedBarcode} productName={productName || 'Generated Product'} />
-
-              {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    toast.info(`Printing barcode labels for ${generatedBarcode}...`);
+              {createSuccess ? (
+                <div className="text-center py-6 space-y-3 animate-fadeIn">
+                  <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto">
+                    <CheckCircle className="w-8 h-8 stroke-[2.2]" />
+                  </div>
+                  <h4 className="text-xl font-black text-slate-900">{t('productAdded')}</h4>
+                  <p className="text-xs text-slate-500 font-semibold">Barcode: {generatedBarcode}</p>
+                </div>
+              ) : (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSaveGeneratedProduct();
                   }}
-                  className="px-2 sm:px-4 py-3.5 sm:py-4 bg-white border-2 border-slate-200 text-slate-900 font-extrabold rounded-2xl text-xs sm:text-base flex items-center justify-center gap-1.5 hover:bg-slate-50 shadow-xs cursor-pointer"
+                  className="space-y-4"
                 >
-                  <Printer className="w-4 h-4 sm:w-5 sm:h-5 text-slate-900 shrink-0" />
-                  <span>Print Barcode</span>
-                </button>
+                  {/* Generated Barcode Card Box */}
+                  <div className="p-4 rounded-2xl bg-slate-900 text-white space-y-2 text-center shadow-lg">
+                    <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-extrabold text-xs uppercase tracking-wider">
+                      <Barcode className="w-4 h-4" />
+                      <span>13-Digit EAN Barcode</span>
+                    </div>
 
-                <button
-                  type="button"
-                  onClick={handleSaveGeneratedProduct}
-                  className="px-2 sm:px-4 py-3.5 sm:py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs sm:text-base flex items-center justify-center shadow-md shadow-emerald-600/25 active:scale-[0.99] cursor-pointer"
-                >
-                  Save Product
-                </button>
-              </div>
+                    <p className="text-2xl font-black font-mono tracking-widest text-white">
+                      {generatedBarcode || '8901234567890'}
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={handleGenerateBarcode}
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>{t('generateBarcode')}</span>
+                    </button>
+                  </div>
+
+                  {/* Product Name */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-extrabold uppercase text-slate-700">
+                      {t('productName')} *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={productName}
+                      onChange={(e) => setProductName(e.target.value)}
+                      placeholder="e.g. Fortune Mustard Oil 1L"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+                    />
+                  </div>
+
+                  {/* Category & Unit */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-extrabold uppercase text-slate-700">
+                        {t('category')}
+                      </label>
+                      <select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="Grocery">Grocery</option>
+                        <option value="Dairy">Dairy</option>
+                        <option value="Snacks">Snacks</option>
+                        <option value="Personal Care">Personal Care</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-extrabold uppercase text-slate-700">
+                        {t('unit')}
+                      </label>
+                      <select
+                        value={unit}
+                        onChange={(e) => setUnit(e.target.value)}
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="Pcs">Pcs</option>
+                        <option value="Kg">Kg</option>
+                        <option value="Litre">Litre</option>
+                        <option value="Packet">Packet</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Purchase & Selling Price */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-extrabold uppercase text-slate-700">
+                        {t('purchasePrice')} (₹)
+                      </label>
+                      <input
+                        type="number"
+                        value={purchasePrice}
+                        onChange={(e) => setPurchasePrice(e.target.value)}
+                        placeholder="140"
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-extrabold uppercase text-slate-700">
+                        {t('sellingPrice')} (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        value={sellingPrice}
+                        onChange={(e) => setSellingPrice(e.target.value)}
+                        placeholder="165"
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Initial Stock Quantity */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-extrabold uppercase text-slate-700">
+                      {t('initialQuantity')}
+                    </label>
+                    <input
+                      type="number"
+                      value={initialQty}
+                      onChange={(e) => setInitialQty(e.target.value)}
+                      placeholder="10"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        toast.info(t('printBarcode'));
+                      }}
+                      className="w-1/3 py-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-1"
+                    >
+                      <Printer className="w-4 h-4" />
+                      <span>{t('printBarcode')}</span>
+                    </button>
+
+                    <button
+                      type="submit"
+                      className="w-2/3 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-2xl shadow-md shadow-emerald-600/30 transition-all cursor-pointer"
+                    >
+                      {t('saveProduct')}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
-          )}
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

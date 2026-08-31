@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Store, Save, Lock, Mail, QrCode, Copy, Check } from 'lucide-react';
+import { Store, Save, Lock, QrCode, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 const StoreDetailsForm = ({
@@ -22,7 +22,7 @@ const StoreDetailsForm = ({
     if (navigator.clipboard && shopCode) {
       navigator.clipboard.writeText(shopCode);
       setCopied(true);
-      toast.success(`Shop Code ${shopCode} copied to clipboard!`);
+      toast.success(t('copiedShopCodeSuccess'));
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -48,7 +48,7 @@ const StoreDetailsForm = ({
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <label className="block text-xs font-extrabold uppercase text-slate-600">
-            Merchant Shop Code
+            {t('merchantShopCode')}
           </label>
           <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
             <Lock className="w-3 h-3 text-slate-400" /> Used for Login
@@ -100,7 +100,7 @@ const StoreDetailsForm = ({
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <label className="block text-xs font-extrabold uppercase text-slate-600">
-            Owner Email Address
+            {t('ownerEmail')}
           </label>
           <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
             <Lock className="w-3 h-3 text-slate-400" /> Verified Account Email
@@ -170,7 +170,7 @@ const StoreDetailsForm = ({
           className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-sm rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
         >
           <Save className="w-4 h-4" />
-          <span>Save Store Details</span>
+          <span>{t('save')} {t('store')}</span>
         </button>
       </div>
     </div>

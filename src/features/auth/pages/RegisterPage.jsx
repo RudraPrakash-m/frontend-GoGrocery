@@ -45,23 +45,23 @@ const RegisterPage = () => {
   const handleSendOtp = (e) => {
     e.preventDefault();
     if (!email || !phone || !storeName) {
-      toast.error('Please fill in Store Name, Email, and Mobile number');
+      toast.error(t('fillRequiredDetailsError'));
       return;
     }
 
     if (pin !== confirmPin) {
-      toast.error(t('pinMismatch') || 'PIN and Confirm PIN do not match!');
+      toast.error(t('pinMismatch'));
       return;
     }
 
-    toast.info(`OTP 1234 sent to ${email}`);
+    toast.info(t('otpSentInfo'));
     setStep(2);
   };
 
   const handleVerifyOtp = (e) => {
     e.preventDefault();
     if (otp !== '1234' && otp.length < 4) {
-      toast.error('Please enter valid 4-digit OTP (demo: 1234)');
+      toast.error(t('enterValidOtpError'));
       return;
     }
 
@@ -81,7 +81,7 @@ const RegisterPage = () => {
       })
     );
 
-    toast.success(`Email verified! Shop Code ${randomCode} generated.`);
+    toast.success(t('registrationComplete'));
     setStep(3);
   };
 
@@ -89,7 +89,7 @@ const RegisterPage = () => {
     if (navigator.clipboard && generatedShopCode) {
       navigator.clipboard.writeText(generatedShopCode);
       setCopied(true);
-      toast.success(`Shop Code ${generatedShopCode} copied!`);
+      toast.success(t('copiedShopCodeSuccess'));
       setTimeout(() => setCopied(false), 2000);
     }
   };
