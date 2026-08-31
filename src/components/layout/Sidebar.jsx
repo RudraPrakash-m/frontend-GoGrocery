@@ -51,11 +51,10 @@ const Sidebar = () => {
                 <NavLink
                   key={item.key}
                   to={item.path}
-                  className={`flex items-center gap-3.5 px-4 py-3 rounded-xl font-bold transition-all text-sm shadow-sm ${
-                    isActive
+                  className={`flex items-center gap-3.5 px-4 py-3 rounded-xl font-bold transition-all text-sm shadow-sm ${isActive
                       ? 'bg-emerald-600 text-white shadow-emerald-600/30'
                       : 'bg-emerald-500 text-white hover:bg-emerald-600'
-                  }`}
+                    }`}
                 >
                   <Icon className="w-5 h-5" />
                   <span>{item.label}</span>
@@ -67,11 +66,10 @@ const Sidebar = () => {
               <NavLink
                 key={item.key}
                 to={item.path}
-                className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl font-semibold transition-all text-sm ${
-                  isActive
+                className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl font-semibold transition-all text-sm ${isActive
                     ? 'bg-emerald-50 text-emerald-700'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
                 <span>{item.label}</span>

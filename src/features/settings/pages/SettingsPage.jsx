@@ -18,6 +18,7 @@ import {
   KeyRound,
 } from 'lucide-react';
 import { logout } from '../../auth/store/authSlice';
+import { authService } from '../../auth/services/authService';
 import { updateStoreDetails } from '../store/settingsSlice';
 import StoreDetailsForm from '../components/StoreDetailsForm';
 
@@ -27,13 +28,15 @@ const SettingsPage = () => {
   const navigate = useNavigate();
 
   const settings = useSelector((state) => state.settings || {});
+  const authUser = useSelector((state) => state.auth?.user || {});
+  const activePlan = String(authUser?.plan || settings?.plan || 'PRO').toUpperCase();
 
-  const [storeName, setStoreName] = useState(settings.storeName || 'GoGrocery');
-  const [phone] = useState(settings.phone || '7846807407');
-  const [email] = useState(settings.email || 'merchant@gogrocery.in');
-  const [shopCode] = useState(settings.shopCode || 'SHOP-8409');
-  const [address, setAddress] = useState(settings.address || 'Plot 21, Market Road, Bhubaneswar');
-  const [gstin, setGstin] = useState(settings.gstin || '21ABCDE1234F1Z5');
+  const [storeName, setStoreName] = useState(settings.storeName || authUser.storeName || 'GoGrocery');
+  const [phone] = useState(settings.phone || authUser.phone || '7846807407');
+  const [email] = useState(settings.email || authUser.email || 'merchant@gogrocery.in');
+  const [shopCode] = useState(settings.shopCode || authUser.shopCode || 'SHOP-8409');
+  const [address, setAddress] = useState(settings.address || authUser.address || 'Plot 21, Market Road, Bhubaneswar');
+  const [gstin, setGstin] = useState(settings.gstin || authUser.gstin || '21ABCDE1234F1Z5');
 
   const [printerConnected, setPrinterConnected] = useState(true);
 
@@ -69,9 +72,17 @@ const SettingsPage = () => {
     setConfirmNewPin('');
   };
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      // Call POST /api/auth/logout to clear token HTTP-Only cookie on backend
+      await authService.logout();
+    } catch (err) {
+      // Ignore API errors during logout
+    } finally {
+      dispatch(logout());
+      toast.success(t('loggedOutSuccess') || 'Logged out successfully!');
+      navigate('/login');
+    }
   };
 
   return (
@@ -172,23 +183,42 @@ const SettingsPage = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-4 rounded-2xl border-2 border-slate-200 bg-slate-50 space-y-2">
-              <span className="font-black text-slate-900 text-xs">BASIC</span>
-              <p className="text-lg font-black text-slate-900">₹4,999 <span className="text-[10px] font-semibold text-slate-500">+ ₹399/mo</span></p>
-            </div>
-
-            <div className="p-4 rounded-2xl border-2 border-blue-200 bg-blue-50/50 space-y-2">
-              <span className="font-black text-blue-900 text-xs">BUSINESS</span>
-              <p className="text-lg font-black text-slate-900">₹9,999 <span className="text-[10px] font-semibold text-slate-500">+ ₹599/mo</span></p>
-            </div>
-
-            <div className="p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-50/60 space-y-2 relative">
-              <span className="absolute top-2 right-2 bg-emerald-600 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full">
-                Active
-              </span>
-              <span className="font-black text-emerald-950 text-xs">PRO</span>
-              <p className="text-lg font-black text-slate-900">₹14,999 <span className="text-[10px] font-semibold text-slate-500">+ ₹799/mo</span></p>
-            </div>
+            {[
+              { key: 'BASIC', name: 'BASIC', price: '₹4,999', monthly: '+ ₹399/mo' },
+              { key: 'BUSINESS', name: 'BUSINESS', price: '₹9,999', monthly: '+ ₹599/mo' },
+              { key: 'PRO', name: 'PRO', price: '₹14,999', monthly: '+ ₹799/mo' },
+            ].map((planItem) => {
+              const isActive = activePlan === planItem.key;
+              return (
+                <div
+                  key={planItem.key}
+                  className={`p-4 rounded-2xl border-2 space-y-2 relative transition-all ${
+                    isActive
+                      ? 'border-emerald-500 bg-emerald-50/60 shadow-xs'
+                      : 'border-slate-200 bg-slate-50 hover:bg-slate-100/80'
+                  }`}
+                >
+                  {isActive && (
+                    <span className="absolute top-2 right-2 bg-emerald-600 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full">
+                      Active
+                    </span>
+                  )}
+                  <span
+                    className={`font-black text-xs ${
+                      isActive ? 'text-emerald-950' : 'text-slate-900'
+                    }`}
+                  >
+                    {planItem.name}
+                  </span>
+                  <p className="text-lg font-black text-slate-900">
+                    {planItem.price}{' '}
+                    <span className="text-[10px] font-semibold text-slate-500">
+                      {planItem.monthly}
+                    </span>
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
 

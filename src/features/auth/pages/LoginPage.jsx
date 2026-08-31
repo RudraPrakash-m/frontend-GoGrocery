@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { loginSuccess } from '../store/authSlice';
 import { authService } from '../services/authService';
 import LanguageToggle from '../../../components/common/LanguageToggle';
@@ -20,12 +21,37 @@ const LoginPage = () => {
     location.state?.shopCode || settings.shopCode || 'SHOP-8409'
   );
   const [pin, setPin] = useState('123456');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const data = await authService.login(mobile, pin);
-    dispatch(loginSuccess(data));
-    navigate('/');
+    if (!mobile || !pin) {
+      toast.error('Please enter your Email/Shop Code and Password');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // POST /api/auth/login using email or shopCode & password
+      const response = await authService.login(mobile, pin);
+
+      const token = response?.token || response?.data?.token;
+      const user = response?.user || response?.data?.user || { shopCode: mobile };
+
+      if (token) {
+        localStorage.setItem('gogrocery_token', token);
+      }
+
+      dispatch(loginSuccess({ user, token }));
+      toast.success(t('loginSuccess') || 'Logged in successfully!');
+      navigate('/');
+    } catch (err) {
+      const errorMsg =
+        err?.response?.data?.message || err?.message || 'Invalid Shop Code/Email or Password';
+      toast.error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -65,9 +91,10 @@ const LoginPage = () => {
             pin={pin}
             setPin={setPin}
             onSubmit={handleSubmit}
+            loading={loading}
           />
 
-          {/* Demo Credentials Box (Mobile removed) */}
+          {/* Demo Credentials Box */}
           <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 text-xs space-y-1">
             <p className="font-extrabold text-emerald-800 text-xs uppercase tracking-wide">
               Demo Credentials
@@ -76,7 +103,7 @@ const LoginPage = () => {
               {t('demoShopCode')}
             </p>
             <p className="font-semibold text-slate-700">
-              PIN: <span className="font-extrabold text-slate-900">123456</span>
+              PIN / Password: <span className="font-extrabold text-slate-900">123456</span>
             </p>
           </div>
         </div>

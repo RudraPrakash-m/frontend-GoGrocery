@@ -16,10 +16,13 @@ import {
   Check,
   ArrowLeft,
   KeyRound,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { updateStoreDetails } from '../../settings/store/settingsSlice';
 import LanguageToggle from '../../../components/common/LanguageToggle';
 import LoginBanner from '../components/LoginBanner';
+import { authService } from '../services/authService';
 
 const RegisterPage = () => {
   const { t } = useTranslation();
@@ -27,6 +30,8 @@ const RegisterPage = () => {
   const dispatch = useDispatch();
 
   const [step, setStep] = useState(1); // 1: details, 2: otp, 3: success
+  const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
 
   // Form Fields
   const [storeName, setStoreName] = useState('GoGrocery Kirana Store');
@@ -38,58 +43,114 @@ const RegisterPage = () => {
   const [confirmPin, setConfirmPin] = useState('123456');
 
   // OTP State
-  const [otp, setOtp] = useState('1234');
+  const [otp, setOtp] = useState('');
   const [generatedShopCode, setGeneratedShopCode] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const handleSendOtp = (e) => {
+  // Handle Step 1: Submit Registration Form to Backend (Encrypted Payload)
+  const handleSendOtp = async (e) => {
     e.preventDefault();
     if (!email || !phone || !storeName) {
-      toast.error(t('fillRequiredDetailsError'));
+      toast.error(t('fillRequiredDetailsError') || 'Please fill in all required details');
       return;
     }
 
     if (pin !== confirmPin) {
-      toast.error(t('pinMismatch'));
+      toast.error(t('pinMismatch') || 'Passwords do not match');
       return;
     }
 
-    toast.info(t('otpSentInfo'));
-    setStep(2);
-  };
-
-  const handleVerifyOtp = (e) => {
-    e.preventDefault();
-    if (otp !== '1234' && otp.length < 4) {
-      toast.error(t('enterValidOtpError'));
-      return;
-    }
-
-    // Generate Unique Merchant Shop Code
-    const randomCode = `SHOP-${Math.floor(1000 + Math.random() * 9000)}`;
-    setGeneratedShopCode(randomCode);
-
-    // Update Redux Store Details & LocalStorage
-    dispatch(
-      updateStoreDetails({
+    setLoading(true);
+    try {
+      const payload = {
         storeName,
-        phone,
         email,
-        shopCode: randomCode,
+        phone,
+        password: pin,
         address,
         gstin,
-      })
-    );
+      };
 
-    toast.success(t('registrationComplete'));
-    setStep(3);
+      // Call Backend POST /auth/register with Encrypted Payload
+      await authService.register(payload);
+
+      toast.success(t('otpSentInfo') || `OTP sent successfully to ${email}`);
+      setStep(2);
+    } catch (err) {
+      const errorMessage =
+        err?.response?.data?.message || err?.message || 'Registration request failed';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Step 2: Verify OTP via Backend API
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (!otp || otp.length < 4) {
+      toast.error(t('enterValidOtpError') || 'Please enter a valid OTP code');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Call Backend POST /auth/verify-otp
+      const response = await authService.verifyOtp(email, otp);
+
+      // Extract shopCode from backend response or generate fallback
+      const shopCode =
+        response?.shopCode ||
+        response?.data?.shopCode ||
+        response?.data?.user?.shopCode ||
+        `SHOP-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      setGeneratedShopCode(shopCode);
+
+      // Update Redux Store Details & LocalStorage
+      dispatch(
+        updateStoreDetails({
+          storeName,
+          phone,
+          email,
+          shopCode,
+          address,
+          gstin,
+        })
+      );
+
+      toast.success(t('registrationComplete') || 'Store registered successfully!');
+      setStep(3);
+    } catch (err) {
+      const errorMessage =
+        err?.response?.data?.message || err?.message || 'Invalid or expired OTP code';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Resend OTP Action
+  const handleResendOtp = async () => {
+    if (!email) return;
+    setResending(true);
+    try {
+      await authService.resendOtp(email);
+      toast.success(`New OTP resent to ${email}`);
+    } catch (err) {
+      const errorMessage =
+        err?.response?.data?.message || err?.message || 'Failed to resend OTP';
+      toast.error(errorMessage);
+    } finally {
+      setResending(false);
+    }
   };
 
   const handleCopyCode = () => {
     if (navigator.clipboard && generatedShopCode) {
       navigator.clipboard.writeText(generatedShopCode);
       setCopied(true);
-      toast.success(t('copiedShopCodeSuccess'));
+      toast.success(t('copiedShopCodeSuccess') || 'Shop Code copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -108,7 +169,7 @@ const RegisterPage = () => {
             className="flex items-center gap-1 text-xs font-extrabold text-slate-500 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>{t('loginHere')}</span>
+            <span>{t('loginHere') || 'Login Here'}</span>
           </Link>
           <LanguageToggle variant="outline" />
         </div>
@@ -123,10 +184,10 @@ const RegisterPage = () => {
             />
             <div>
               <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">
-                {t('registerStore')}
+                {t('registerStore') || 'Register Store'}
               </h2>
               <p className="text-xs text-slate-500 font-semibold mt-1">
-                {t('registerSubtitle')}
+                {t('registerSubtitle') || 'Create your digital kirana merchant account'}
               </p>
             </div>
           </div>
@@ -137,7 +198,7 @@ const RegisterPage = () => {
               {/* Store Name */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-extrabold uppercase text-slate-700">
-                  {t('storeName')} *
+                  {t('storeName') || 'Store Name'} *
                 </label>
                 <div className="relative">
                   <Store className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400" />
@@ -155,7 +216,7 @@ const RegisterPage = () => {
               {/* Owner Email Address */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-extrabold uppercase text-slate-700">
-                  {t('ownerEmail')} * (For OTP)
+                  {t('ownerEmail') || 'Owner Email'} * (For OTP)
                 </label>
                 <div className="relative">
                   <Mail className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400" />
@@ -173,7 +234,7 @@ const RegisterPage = () => {
               {/* Mobile Number */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-extrabold uppercase text-slate-700">
-                  {t('mobileNumber')} *
+                  {t('mobileNumber') || 'Mobile Number'} *
                 </label>
                 <div className="relative">
                   <Phone className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400" />
@@ -191,7 +252,7 @@ const RegisterPage = () => {
               {/* Store Address */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-extrabold uppercase text-slate-700">
-                  {t('address')}
+                  {t('address') || 'Store Address'}
                 </label>
                 <div className="relative">
                   <MapPin className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400" />
@@ -205,11 +266,11 @@ const RegisterPage = () => {
                 </div>
               </div>
 
-              {/* PIN & Confirm PIN */}
+              {/* Password & Confirm Password */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-extrabold uppercase text-slate-700">
-                    {t('password')} *
+                    {t('password') || 'Password'} *
                   </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
@@ -226,7 +287,7 @@ const RegisterPage = () => {
 
                 <div className="space-y-1.5">
                   <label className="block text-xs font-extrabold uppercase text-slate-700">
-                    {t('confirmPassword')} *
+                    {t('confirmPassword') || 'Confirm Password'} *
                   </label>
                   <div className="relative">
                     <KeyRound className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
@@ -245,10 +306,20 @@ const RegisterPage = () => {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-base rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer mt-2"
+                disabled={loading}
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-70 text-white font-extrabold text-base rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer mt-2"
               >
-                <span>{t('sendOtp')}</span>
-                <ArrowRight className="w-5 h-5" />
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Encrypting & Sending OTP...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{t('sendOtp') || 'Send OTP'}</span>
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
               </button>
             </form>
           )}
@@ -268,34 +339,57 @@ const RegisterPage = () => {
 
               <div className="space-y-2 text-center">
                 <label className="block text-xs font-extrabold uppercase text-slate-700">
-                  Enter 4-Digit OTP (Demo: 1234)
+                  Enter OTP Code
                 </label>
                 <input
                   type="text"
-                  maxLength={4}
+                  maxLength={6}
                   required
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
+                  placeholder="1234"
                   className="w-48 mx-auto p-3.5 bg-white border-2 border-emerald-500 rounded-2xl text-center text-2xl font-black font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-sm"
                 />
               </div>
 
-              <div className="space-y-2 pt-2">
+              <div className="space-y-2.5 pt-2">
                 <button
                   type="submit"
-                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-base rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  disabled={loading}
+                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-70 text-white font-extrabold text-base rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
-                  <ShieldCheck className="w-5 h-5" />
-                  <span>{t('verifyOtp')}</span>
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Verifying Code...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-5 h-5" />
+                      <span>{t('verifyOtp') || 'Verify OTP'}</span>
+                    </>
+                  )}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="w-full py-2 text-xs font-extrabold text-slate-500 hover:text-slate-900 transition-colors"
-                >
-                  Edit Registration Details
-                </button>
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={resending}
+                    className="font-extrabold text-emerald-600 hover:text-emerald-800 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${resending ? 'animate-spin' : ''}`} />
+                    <span>{resending ? 'Resending...' : 'Resend OTP'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="font-extrabold text-slate-500 hover:text-slate-900 transition-colors"
+                  >
+                    Edit Registration Details
+                  </button>
+                </div>
               </div>
             </form>
           )}
@@ -308,7 +402,9 @@ const RegisterPage = () => {
               </div>
 
               <div className="space-y-1">
-                <h3 className="text-2xl font-black text-slate-900">{t('registrationComplete')}</h3>
+                <h3 className="text-2xl font-black text-slate-900">
+                  {t('registrationComplete') || 'Registration Complete!'}
+                </h3>
                 <p className="text-xs text-slate-500 font-semibold">
                   Store <strong className="text-slate-900">{storeName}</strong> registered successfully.
                 </p>
@@ -317,7 +413,7 @@ const RegisterPage = () => {
               {/* Unique Shop Code Banner */}
               <div className="p-5 rounded-3xl bg-slate-900 text-white space-y-3 shadow-xl">
                 <p className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-400">
-                  {t('merchantShopCode')}
+                  {t('merchantShopCode') || 'Merchant Shop Code'}
                 </p>
                 <p className="text-3xl font-black font-mono tracking-widest text-white">
                   {generatedShopCode}
@@ -342,7 +438,7 @@ const RegisterPage = () => {
                 onClick={() => navigate('/login', { state: { shopCode: generatedShopCode } })}
                 className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-base rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
-                <span>{t('proceedToLogin')}</span>
+                <span>{t('proceedToLogin') || 'Proceed to Login'}</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
             </div>
@@ -351,16 +447,16 @@ const RegisterPage = () => {
           {/* Bottom Login Link */}
           <div className="text-center pt-2 border-t border-slate-100">
             <p className="text-xs font-bold text-slate-500">
-              {t('alreadyRegistered')}{' '}
+              {t('alreadyRegistered') || 'Already registered?'}{' '}
               <Link to="/login" className="text-emerald-600 font-extrabold hover:underline">
-                {t('loginHere')}
+                {t('loginHere') || 'Login Here'}
               </Link>
             </p>
           </div>
         </div>
 
         <div className="text-center text-xs text-slate-400 pt-4">
-          © {new Date().getFullYear()} {t('appName')} • Digital Kirana Registration
+          © {new Date().getFullYear()} {t('appName') || 'GoGrocery'} • Digital Kirana Registration
         </div>
       </div>
     </div>
