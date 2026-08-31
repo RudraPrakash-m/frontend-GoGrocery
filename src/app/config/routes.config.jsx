@@ -19,6 +19,7 @@ import ErrorPage from '../../features/error/pages/ErrorPage';
 import Loader from '../../components/common/Loader';
 import { authService } from '../../features/auth/services/authService';
 import { setUserProfile, logout } from '../../features/auth/authSlice';
+import { updateStoreDetails } from '../../features/settings/store/settingsSlice';
 
 // Protected Route Wrapper for Data Router (Verifies HTTP-Only Cookies & Bearer Tokens)
 const ProtectedLayout = () => {
@@ -36,6 +37,7 @@ const ProtectedLayout = () => {
         if (isMounted) {
           const userObj = res?.user || res?.data?.user || res?.data || res;
           dispatch(setUserProfile(userObj));
+          dispatch(updateStoreDetails(userObj));
         }
       } catch (err) {
         if (isMounted) {

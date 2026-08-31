@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -16,9 +16,13 @@ import {
   X,
   Lock,
   KeyRound,
+  Eye,
+  EyeOff,
+  Loader2,
 } from 'lucide-react';
-import { logout } from '../../auth/store/authSlice';
+import { logout, setUserProfile } from '../../auth/store/authSlice';
 import { authService } from '../../auth/services/authService';
+import { validateStoreDetailsUpdate } from '../../auth/validation/authValidation';
 import { updateStoreDetails } from '../store/settingsSlice';
 import StoreDetailsForm from '../components/StoreDetailsForm';
 
@@ -31,45 +35,130 @@ const SettingsPage = () => {
   const authUser = useSelector((state) => state.auth?.user || {});
   const activePlan = String(authUser?.plan || settings?.plan || 'PRO').toUpperCase();
 
-  const [storeName, setStoreName] = useState(settings.storeName || authUser.storeName || 'GoGrocery');
-  const [phone] = useState(settings.phone || authUser.phone || '7846807407');
-  const [email] = useState(settings.email || authUser.email || 'merchant@gogrocery.in');
-  const [shopCode] = useState(settings.shopCode || authUser.shopCode || 'SHOP-8409');
-  const [address, setAddress] = useState(settings.address || authUser.address || 'Plot 21, Market Road, Bhubaneswar');
-  const [gstin, setGstin] = useState(settings.gstin || authUser.gstin || '21ABCDE1234F1Z5');
+  const [storeName, setStoreName] = useState(authUser?.storeName || settings?.storeName || 'GoGrocery');
+  const [phone, setPhone] = useState(authUser?.phone || settings?.phone || '7846807407');
+  const [email, setEmail] = useState(authUser?.email || settings?.email || 'merchant@gogrocery.in');
+  const [shopCode, setShopCode] = useState(authUser?.shopCode || settings?.shopCode || 'SHOP-8409');
+  const [address, setAddress] = useState(authUser?.address || settings?.address || 'Plot 21, Market Road, Bhubaneswar');
+  const [gstin, setGstin] = useState(authUser?.gstin || settings?.gstin || '21ABCDE1234F1Z5');
+
+  // Synchronize state when authUser (/auth/me) updates
+  useEffect(() => {
+    if (authUser && Object.keys(authUser).length > 0) {
+      if (authUser.storeName) setStoreName(authUser.storeName);
+      if (authUser.phone) setPhone(authUser.phone);
+      if (authUser.email) setEmail(authUser.email);
+      if (authUser.shopCode) setShopCode(authUser.shopCode);
+      if (authUser.address) setAddress(authUser.address);
+      if (authUser.gstin) setGstin(authUser.gstin);
+    }
+  }, [authUser]);
+
+  const [savingStore, setSavingStore] = useState(false);
+  const [storeErrors, setStoreErrors] = useState({});
 
   const [printerConnected, setPrinterConnected] = useState(true);
 
-  // Change PIN Modal state (no OTP required as user is logged in)
+  // Change PIN Modal state
   const [showChangePinModal, setShowChangePinModal] = useState(false);
-  const [currentPin, setCurrentPin] = useState('123456');
+  const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmNewPin, setConfirmNewPin] = useState('');
+  const [pinLoading, setPinLoading] = useState(false);
+  const [pinErrors, setPinErrors] = useState({});
 
-  const handleSaveStore = () => {
-    dispatch(updateStoreDetails({ storeName, phone, email, shopCode, address, gstin }));
-    toast.success('Store details saved! Updated on Dashboard & Bills.');
+  // Password Visibility States
+  const [showCurrentPin, setShowCurrentPin] = useState(false);
+  const [showNewPin, setShowNewPin] = useState(false);
+  const [showConfirmPin, setShowConfirmPin] = useState(false);
+
+  const handleSaveStore = async () => {
+    // Client-side validation
+    const validation = validateStoreDetailsUpdate({ storeName, address, gstin, phone });
+    if (!validation.isValid) {
+      setStoreErrors(validation.errors);
+      const firstError = Object.values(validation.errors)[0];
+      toast.error(firstError);
+      return;
+    }
+    setStoreErrors({});
+    setSavingStore(true);
+
+    try {
+      // PUT /api/auth/store-details with encrypted payload
+      const res = await authService.updateStoreDetails({
+        storeName,
+        address,
+        gstin,
+        phone,
+      });
+
+      const updatedData = res?.data || res?.user || res?.shop || res;
+      dispatch(updateStoreDetails(updatedData));
+      dispatch(setUserProfile(updatedData));
+      toast.success(res?.message || 'Store details updated successfully!');
+    } catch (err) {
+      const errorMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to update store details. Please try again.';
+      toast.error(errorMsg);
+    } finally {
+      setSavingStore(false);
+    }
   };
 
-  const handleUpdatePinSubmit = (e) => {
+  const handleUpdatePinSubmit = async (e) => {
     e.preventDefault();
+    const newErrors = {};
+
     if (!currentPin.trim()) {
-      toast.error('Please enter your current PIN');
-      return;
+      newErrors.currentPin = 'Please enter your current PIN';
     }
-    if (!newPin.trim()) {
-      toast.error('Please enter your new PIN');
-      return;
+    if (!newPin.trim() || newPin.length < 6) {
+      newErrors.newPin = 'New PIN must be at least 6 characters';
     }
     if (newPin !== confirmNewPin) {
-      toast.error(t('pinMismatch') || 'PIN and Confirm PIN do not match!');
-      return;
+      newErrors.confirmNewPin = t('pinMismatch') || 'PIN and Confirm PIN do not match!';
+    }
+    if (currentPin && newPin && currentPin === newPin) {
+      newErrors.newPin = 'New PIN cannot be identical to current PIN';
     }
 
-    toast.success(t('pinUpdatedSuccess') || 'Security PIN updated successfully!');
-    setShowChangePinModal(false);
-    setNewPin('');
-    setConfirmNewPin('');
+    if (Object.keys(newErrors).length > 0) {
+      setPinErrors(newErrors);
+      toast.error(Object.values(newErrors)[0]);
+      return;
+    }
+    setPinErrors({});
+
+    const merchantId = authUser?.id || authUser?._id || authUser?.data?.id || settings?.id;
+
+    setPinLoading(true);
+    try {
+      // POST /auth/change-pin with encrypted payload { id, currentPin, newPin }
+      // Cookie is automatically passed with withCredentials: true
+      await authService.changePin({
+        id: merchantId,
+        currentPin,
+        newPin,
+      });
+
+      toast.success(t('pinUpdatedSuccess') || 'Security PIN updated successfully!');
+      setShowChangePinModal(false);
+      setCurrentPin('');
+      setNewPin('');
+      setConfirmNewPin('');
+    } catch (err) {
+      const errorMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to update PIN. Please verify your current PIN.';
+      setPinErrors({ currentPin: errorMsg });
+      toast.error(errorMsg);
+    } finally {
+      setPinLoading(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -100,13 +189,19 @@ const SettingsPage = () => {
           storeName={storeName}
           setStoreName={setStoreName}
           phone={phone}
+          setPhone={setPhone}
           email={email}
           shopCode={shopCode}
           address={address}
           setAddress={setAddress}
           gstin={gstin}
           setGstin={setGstin}
+          plan={authUser?.plan || settings?.plan}
+          isVerified={authUser?.isVerified}
           onSave={handleSaveStore}
+          loading={savingStore}
+          errors={storeErrors}
+          setErrors={setStoreErrors}
         />
 
         {/* HARDWARE UX SIMULATION CARD */}
@@ -278,7 +373,7 @@ const SettingsPage = () => {
                 </div>
               </div>
 
-              <form onSubmit={handleUpdatePinSubmit} className="space-y-4">
+              <form onSubmit={handleUpdatePinSubmit} className="space-y-4" noValidate>
                 {/* Current PIN */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-extrabold uppercase text-slate-700">
@@ -287,14 +382,38 @@ const SettingsPage = () => {
                   <div className="relative">
                     <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
                     <input
-                      type="password"
+                      type={showCurrentPin ? 'text' : 'password'}
                       required
+                      disabled={pinLoading}
                       value={currentPin}
-                      onChange={(e) => setCurrentPin(e.target.value)}
+                      onChange={(e) => {
+                        setCurrentPin(e.target.value);
+                        if (pinErrors.currentPin) setPinErrors((p) => ({ ...p, currentPin: null }));
+                      }}
                       placeholder="Enter current PIN"
-                      className="w-full pl-10 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+                      className={`w-full pl-10 pr-10 py-3 bg-slate-50 border rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all disabled:opacity-60 ${
+                        pinErrors?.currentPin
+                          ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
+                          : 'border-slate-200 focus:ring-emerald-500'
+                      }`}
                     />
+                    <button
+                      type="button"
+                      disabled={pinLoading}
+                      onClick={() => setShowCurrentPin((prev) => !prev)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer focus:outline-none disabled:opacity-50"
+                      aria-label={showCurrentPin ? 'Hide PIN' : 'Show PIN'}
+                    >
+                      {showCurrentPin ? (
+                        <EyeOff className="w-4 h-4 stroke-[2.2]" />
+                      ) : (
+                        <Eye className="w-4 h-4 stroke-[2.2]" />
+                      )}
+                    </button>
                   </div>
+                  {pinErrors?.currentPin && (
+                    <p className="text-xs font-bold text-rose-500 pl-1">{pinErrors.currentPin}</p>
+                  )}
                 </div>
 
                 {/* New PIN */}
@@ -305,14 +424,38 @@ const SettingsPage = () => {
                   <div className="relative">
                     <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
                     <input
-                      type="password"
+                      type={showNewPin ? 'text' : 'password'}
                       required
+                      disabled={pinLoading}
                       value={newPin}
-                      onChange={(e) => setNewPin(e.target.value)}
+                      onChange={(e) => {
+                        setNewPin(e.target.value);
+                        if (pinErrors.newPin) setPinErrors((p) => ({ ...p, newPin: null }));
+                      }}
                       placeholder="Enter new 6-digit PIN"
-                      className="w-full pl-10 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+                      className={`w-full pl-10 pr-10 py-3 bg-slate-50 border rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all disabled:opacity-60 ${
+                        pinErrors?.newPin
+                          ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
+                          : 'border-slate-200 focus:ring-emerald-500'
+                      }`}
                     />
+                    <button
+                      type="button"
+                      disabled={pinLoading}
+                      onClick={() => setShowNewPin((prev) => !prev)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer focus:outline-none disabled:opacity-50"
+                      aria-label={showNewPin ? 'Hide PIN' : 'Show PIN'}
+                    >
+                      {showNewPin ? (
+                        <EyeOff className="w-4 h-4 stroke-[2.2]" />
+                      ) : (
+                        <Eye className="w-4 h-4 stroke-[2.2]" />
+                      )}
+                    </button>
                   </div>
+                  {pinErrors?.newPin && (
+                    <p className="text-xs font-bold text-rose-500 pl-1">{pinErrors.newPin}</p>
+                  )}
                 </div>
 
                 {/* Confirm New PIN */}
@@ -323,23 +466,57 @@ const SettingsPage = () => {
                   <div className="relative">
                     <KeyRound className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
                     <input
-                      type="password"
+                      type={showConfirmPin ? 'text' : 'password'}
                       required
+                      disabled={pinLoading}
                       value={confirmNewPin}
-                      onChange={(e) => setConfirmNewPin(e.target.value)}
+                      onChange={(e) => {
+                        setConfirmNewPin(e.target.value);
+                        if (pinErrors.confirmNewPin) setPinErrors((p) => ({ ...p, confirmNewPin: null }));
+                      }}
                       placeholder="Confirm new 6-digit PIN"
-                      className="w-full pl-10 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+                      className={`w-full pl-10 pr-10 py-3 bg-slate-50 border rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all disabled:opacity-60 ${
+                        pinErrors?.confirmNewPin
+                          ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
+                          : 'border-slate-200 focus:ring-emerald-500'
+                      }`}
                     />
+                    <button
+                      type="button"
+                      disabled={pinLoading}
+                      onClick={() => setShowConfirmPin((prev) => !prev)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer focus:outline-none disabled:opacity-50"
+                      aria-label={showConfirmPin ? 'Hide PIN' : 'Show PIN'}
+                    >
+                      {showConfirmPin ? (
+                        <EyeOff className="w-4 h-4 stroke-[2.2]" />
+                      ) : (
+                        <Eye className="w-4 h-4 stroke-[2.2]" />
+                      )}
+                    </button>
                   </div>
+                  {pinErrors?.confirmNewPin && (
+                    <p className="text-xs font-bold text-rose-500 pl-1">{pinErrors.confirmNewPin}</p>
+                  )}
                 </div>
 
                 {/* Submit Action Button */}
                 <button
                   type="submit"
-                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-sm rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer mt-2"
+                  disabled={pinLoading}
+                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed text-white font-extrabold text-sm rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer mt-2"
                 >
-                  <Key className="w-4 h-4" />
-                  <span>{t('updatePin') || 'Update PIN'}</span>
+                  {pinLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Updating PIN...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Key className="w-4 h-4" />
+                      <span>{t('updatePin') || 'Update PIN'}</span>
+                    </>
+                  )}
                 </button>
               </form>
             </div>

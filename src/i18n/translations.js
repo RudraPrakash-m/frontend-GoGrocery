@@ -217,6 +217,15 @@ export const translations = {
     confirmEditMessage: 'Are you sure you want to save changes to this product?',
     productUpdatedSuccess: 'Product details updated successfully!',
     productDeletedSuccess: 'Product deleted from catalog.',
+    // Auth Loader Translations
+    loggingIn: 'Logging in...',
+    authenticatingStore: 'Authenticating your store account...',
+    registeringStore: 'Registering Store...',
+    sendingOtpSubtext: 'Encrypting store data & sending OTP to your email...',
+    verifyingOtp: 'Verifying OTP...',
+    verifyingOtpSubtext: 'Verifying security code and configuring your store...',
+    resendingOtp: 'Resending OTP...',
+    resendingOtpSubtext: 'Sending fresh verification code to your email...',
   },
   or: {
     appName: 'ଗୋ ଗ୍ରୋସେରୀ',
@@ -435,5 +444,14 @@ export const translations = {
     confirmEditMessage: 'ଆପଣ ଏହି ଉତ୍ପାଦ ବିବରଣୀ ସେଭ୍ କରିବାକୁ ନିଶ୍ଚିତ କି?',
     productUpdatedSuccess: 'ଉତ୍ପାଦ ବିବରଣୀ ସଫଳତାପୂର୍ବକ ବଦଳାଗଲା!',
     productDeletedSuccess: 'ଉତ୍ପାଦ କାଟାଲଗ୍ ରୁ ଡିଲିଟ୍ ହେଲା।',
+    // Auth Loader Translations
+    loggingIn: 'ଲଗଇନ୍ ହେଉଛି...',
+    authenticatingStore: 'ଆପଣଙ୍କ ଦୋକାନ ଆକାଉଣ୍ଟ ଯାଞ୍ଚ ହେଉଛି...',
+    registeringStore: 'ଦୋକାନ ପଞ୍ଜୀକରଣ ହେଉଛି...',
+    sendingOtpSubtext: 'ଦୋକାନ ତଥ୍ୟ ସୁରକ୍ଷିତ କରି ଇମେଲ୍ କୁ OTP ପଠାଯାଉଛି...',
+    verifyingOtp: 'OTP ଯାଞ୍ଚ ହେଉଛି...',
+    verifyingOtpSubtext: 'କୋଡ୍ ଯାଞ୍ଚ କରି ଆପଣଙ୍କ ଦୋକାନ ସେଟ୍ କରାଯାଉଛି...',
+    resendingOtp: 'ପୁନର୍ବାର OTP ପଠାଯାଉଛି...',
+    resendingOtpSubtext: 'ଆପଣଙ୍କ ଇମେଲ୍ କୁ ନୂଆ OTP ପଠାଯାଉଛି...',
   },
 };

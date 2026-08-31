@@ -1,1 +1,2 @@
-export { default, loginSuccess, logout, setError } from '../authSlice';
+export * from '../authSlice';
+export { default } from '../authSlice';

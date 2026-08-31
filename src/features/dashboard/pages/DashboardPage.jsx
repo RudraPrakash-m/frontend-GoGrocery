@@ -9,7 +9,9 @@ import LanguageToggle from '../../../components/common/LanguageToggle';
 
 const DashboardPage = () => {
   const { t } = useTranslation();
-  const { storeName } = useSelector((state) => state.settings || { storeName: 'GoGrocery' });
+  const authUser = useSelector((state) => state.auth?.user || {});
+  const settings = useSelector((state) => state.settings || {});
+  const storeName = authUser?.storeName || settings?.storeName || 'GoGrocery';
   const stats = dashboardService.getStats();
   const lowStockItems = dashboardService.getLowStockItems();
 
@@ -22,7 +24,7 @@ const DashboardPage = () => {
             <span>{t('goodMorning')}</span>
           </p>
           <h1 className="text-2xl md:text-4xl font-extrabold text-slate-900 tracking-tight mt-0.5">
-            {storeName || 'GoGrocery'}
+            {storeName}
           </h1>
         </div>
 

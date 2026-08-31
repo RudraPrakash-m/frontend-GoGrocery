@@ -18,11 +18,15 @@ import {
   KeyRound,
   RefreshCw,
   Loader2,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { updateStoreDetails } from '../../settings/store/settingsSlice';
 import LanguageToggle from '../../../components/common/LanguageToggle';
 import LoginBanner from '../components/LoginBanner';
+import Loader from '../../../components/common/Loader';
 import { authService } from '../services/authService';
+import { validateRegisterForm, validateOtp } from '../validation/authValidation';
 
 const RegisterPage = () => {
   const { t } = useTranslation();
@@ -32,6 +36,11 @@ const RegisterPage = () => {
   const [step, setStep] = useState(1); // 1: details, 2: otp, 3: success
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  // Password Visibility States
+  const [showPin, setShowPin] = useState(false);
+  const [showConfirmPin, setShowConfirmPin] = useState(false);
 
   // Form Fields
   const [storeName, setStoreName] = useState('GoGrocery Kirana Store');
@@ -47,28 +56,42 @@ const RegisterPage = () => {
   const [generatedShopCode, setGeneratedShopCode] = useState('');
   const [copied, setCopied] = useState(false);
 
+  const clearFieldError = (field) => {
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: null }));
+    }
+  };
+
   // Handle Step 1: Submit Registration Form to Backend (Encrypted Payload)
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    if (!email || !phone || !storeName) {
-      toast.error(t('fillRequiredDetailsError') || 'Please fill in all required details');
-      return;
-    }
 
-    if (pin !== confirmPin) {
-      toast.error(t('pinMismatch') || 'Passwords do not match');
+    // Client-side Validation
+    const validation = validateRegisterForm({
+      storeName,
+      email,
+      phone,
+      pin,
+      confirmPin,
+    });
+
+    if (!validation.isValid) {
+      setErrors(validation.errors);
+      const firstError = Object.values(validation.errors)[0];
+      toast.error(firstError);
       return;
     }
+    setErrors({});
 
     setLoading(true);
     try {
       const payload = {
-        storeName,
-        email,
-        phone,
+        storeName: storeName.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
         password: pin,
-        address,
-        gstin,
+        address: address.trim(),
+        gstin: gstin.trim(),
       };
 
       // Call Backend POST /auth/register with Encrypted Payload
@@ -77,8 +100,20 @@ const RegisterPage = () => {
       toast.success(t('otpSentInfo') || `OTP sent successfully to ${email}`);
       setStep(2);
     } catch (err) {
-      const errorMessage =
-        err?.response?.data?.message || err?.message || 'Registration request failed';
+      let errorMessage = 'Registration request failed. Please check your details.';
+      const status = err?.response?.status;
+
+      if (err?.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (status === 409) {
+        errorMessage = 'An account with this email or mobile number already exists.';
+        setErrors({ email: 'Account already exists with this email or mobile number' });
+      } else if (status === 400 || status === 422) {
+        errorMessage = 'Invalid registration details. Please verify all fields.';
+      } else if (err?.message && !err.response) {
+        errorMessage = 'Unable to connect to server. Please verify your connection.';
+      }
+
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -88,15 +123,19 @@ const RegisterPage = () => {
   // Handle Step 2: Verify OTP via Backend API
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    if (!otp || otp.length < 4) {
-      toast.error(t('enterValidOtpError') || 'Please enter a valid OTP code');
+
+    const otpError = validateOtp(otp);
+    if (otpError) {
+      setErrors({ otp: otpError });
+      toast.error(otpError);
       return;
     }
+    setErrors({});
 
     setLoading(true);
     try {
       // Call Backend POST /auth/verify-otp
-      const response = await authService.verifyOtp(email, otp);
+      const response = await authService.verifyOtp(email.trim(), otp.trim());
 
       // Extract shopCode from backend response or generate fallback
       const shopCode =
@@ -110,20 +149,25 @@ const RegisterPage = () => {
       // Update Redux Store Details & LocalStorage
       dispatch(
         updateStoreDetails({
-          storeName,
-          phone,
-          email,
+          storeName: storeName.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
           shopCode,
-          address,
-          gstin,
+          address: address.trim(),
+          gstin: gstin.trim(),
         })
       );
 
       toast.success(t('registrationComplete') || 'Store registered successfully!');
       setStep(3);
     } catch (err) {
-      const errorMessage =
-        err?.response?.data?.message || err?.message || 'Invalid or expired OTP code';
+      let errorMessage = 'Invalid or expired OTP code. Please try again.';
+      if (err?.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err?.response?.status === 400 || err?.response?.status === 401) {
+        errorMessage = 'Incorrect OTP code or session expired. Please verify and retry.';
+      }
+      setErrors({ otp: errorMessage });
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -135,11 +179,11 @@ const RegisterPage = () => {
     if (!email) return;
     setResending(true);
     try {
-      await authService.resendOtp(email);
-      toast.success(`New OTP resent to ${email}`);
+      await authService.resendOtp(email.trim());
+      toast.success(`New OTP code resent to ${email}`);
     } catch (err) {
       const errorMessage =
-        err?.response?.data?.message || err?.message || 'Failed to resend OTP';
+        err?.response?.data?.message || err?.message || 'Failed to resend OTP. Please try again.';
       toast.error(errorMessage);
     } finally {
       setResending(false);
@@ -157,6 +201,25 @@ const RegisterPage = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-white font-sans text-slate-800">
+      {/* Fullscreen Loader during registration and verification */}
+      <Loader
+        isOpen={loading || resending}
+        text={
+          resending
+            ? (t('resendingOtp') || 'Resending OTP...')
+            : step === 1
+            ? (t('registeringStore') || 'Registering Store...')
+            : (t('verifyingOtp') || 'Verifying OTP...')
+        }
+        subtext={
+          resending
+            ? (t('resendingOtpSubtext') || `Sending fresh verification code to ${email}...`)
+            : step === 1
+            ? (t('sendingOtpSubtext') || 'Encrypting store data & sending OTP to your email...')
+            : (t('verifyingOtpSubtext') || 'Verifying security code and configuring your store...')
+        }
+      />
+
       {/* Left side banner - HIDDEN ON MOBILE */}
       <LoginBanner />
 
@@ -194,7 +257,7 @@ const RegisterPage = () => {
 
           {/* STEP 1: STORE & OWNER DETAILS FORM */}
           {step === 1 && (
-            <form onSubmit={handleSendOtp} className="space-y-4">
+            <form onSubmit={handleSendOtp} className="space-y-4" noValidate>
               {/* Store Name */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-extrabold uppercase text-slate-700">
@@ -205,12 +268,23 @@ const RegisterPage = () => {
                   <input
                     type="text"
                     required
+                    disabled={loading}
                     value={storeName}
-                    onChange={(e) => setStoreName(e.target.value)}
+                    onChange={(e) => {
+                      setStoreName(e.target.value);
+                      clearFieldError('storeName');
+                    }}
                     placeholder="e.g. GoGrocery Kirana Store"
-                    className="w-full pl-11 pr-4 py-3 bg-blue-50/70 border border-slate-200/90 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+                    className={`w-full pl-11 pr-4 py-3 bg-blue-50/70 border rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
+                      errors?.storeName
+                        ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
+                        : 'border-slate-200/90 focus:ring-emerald-500'
+                    }`}
                   />
                 </div>
+                {errors?.storeName && (
+                  <p className="text-xs font-bold text-rose-500 pl-1">{errors.storeName}</p>
+                )}
               </div>
 
               {/* Owner Email Address */}
@@ -223,12 +297,23 @@ const RegisterPage = () => {
                   <input
                     type="email"
                     required
+                    disabled={loading}
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      clearFieldError('email');
+                    }}
                     placeholder="owner@gogrocery.in"
-                    className="w-full pl-11 pr-4 py-3 bg-blue-50/70 border border-slate-200/90 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+                    className={`w-full pl-11 pr-4 py-3 bg-blue-50/70 border rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
+                      errors?.email
+                        ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
+                        : 'border-slate-200/90 focus:ring-emerald-500'
+                    }`}
                   />
                 </div>
+                {errors?.email && (
+                  <p className="text-xs font-bold text-rose-500 pl-1">{errors.email}</p>
+                )}
               </div>
 
               {/* Mobile Number */}
@@ -241,12 +326,23 @@ const RegisterPage = () => {
                   <input
                     type="tel"
                     required
+                    disabled={loading}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      clearFieldError('phone');
+                    }}
                     placeholder="7846807407"
-                    className="w-full pl-11 pr-4 py-3 bg-blue-50/70 border border-slate-200/90 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+                    className={`w-full pl-11 pr-4 py-3 bg-blue-50/70 border rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
+                      errors?.phone
+                        ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
+                        : 'border-slate-200/90 focus:ring-emerald-500'
+                    }`}
                   />
                 </div>
+                {errors?.phone && (
+                  <p className="text-xs font-bold text-rose-500 pl-1">{errors.phone}</p>
+                )}
               </div>
 
               {/* Store Address */}
@@ -258,16 +354,18 @@ const RegisterPage = () => {
                   <MapPin className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400" />
                   <input
                     type="text"
+                    disabled={loading}
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="Plot 21, Market Road, Bhubaneswar"
-                    className="w-full pl-11 pr-4 py-3 bg-blue-50/70 border border-slate-200/90 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+                    className="w-full pl-11 pr-4 py-3 bg-blue-50/70 border border-slate-200/90 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
 
               {/* Password & Confirm Password */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Password Field */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-extrabold uppercase text-slate-700">
                     {t('password') || 'Password'} *
@@ -275,16 +373,45 @@ const RegisterPage = () => {
                   <div className="relative">
                     <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
                     <input
-                      type="password"
+                      id="register-password"
+                      name="password"
+                      autoComplete="new-password"
+                      type={showPin ? 'text' : 'password'}
                       required
+                      disabled={loading}
                       value={pin}
-                      onChange={(e) => setPin(e.target.value)}
-                      placeholder="123456"
-                      className="w-full pl-10 pr-3 py-3 bg-blue-50/70 border border-slate-200/90 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+                      onChange={(e) => {
+                        setPin(e.target.value);
+                        clearFieldError('pin');
+                      }}
+                      placeholder="Enter 6-digit PIN"
+                      className={`w-full pl-10 pr-10 py-3 bg-blue-50/70 border rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
+                        errors?.pin
+                          ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
+                          : 'border-slate-200/90 focus:ring-emerald-500'
+                      }`}
                     />
+                    {/* Show/Hide Password Icon Button */}
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => setShowPin((prev) => !prev)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none"
+                      aria-label={showPin ? 'Hide password' : 'Show password'}
+                    >
+                      {showPin ? (
+                        <EyeOff className="w-4 h-4 stroke-[2.2]" />
+                      ) : (
+                        <Eye className="w-4 h-4 stroke-[2.2]" />
+                      )}
+                    </button>
                   </div>
+                  {errors?.pin && (
+                    <p className="text-xs font-bold text-rose-500 pl-1">{errors.pin}</p>
+                  )}
                 </div>
 
+                {/* Confirm Password Field */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-extrabold uppercase text-slate-700">
                     {t('confirmPassword') || 'Confirm Password'} *
@@ -292,14 +419,42 @@ const RegisterPage = () => {
                   <div className="relative">
                     <KeyRound className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
                     <input
-                      type="password"
+                      id="register-confirm-password"
+                      name="confirmPassword"
+                      autoComplete="new-password"
+                      type={showConfirmPin ? 'text' : 'password'}
                       required
+                      disabled={loading}
                       value={confirmPin}
-                      onChange={(e) => setConfirmPin(e.target.value)}
-                      placeholder="123456"
-                      className="w-full pl-10 pr-3 py-3 bg-blue-50/70 border border-slate-200/90 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+                      onChange={(e) => {
+                        setConfirmPin(e.target.value);
+                        clearFieldError('confirmPin');
+                      }}
+                      placeholder="Confirm PIN"
+                      className={`w-full pl-10 pr-10 py-3 bg-blue-50/70 border rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
+                        errors?.confirmPin
+                          ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
+                          : 'border-slate-200/90 focus:ring-emerald-500'
+                      }`}
                     />
+                    {/* Show/Hide Confirm Password Icon Button */}
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => setShowConfirmPin((prev) => !prev)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer disabled:opacity-50 focus:outline-none"
+                      aria-label={showConfirmPin ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirmPin ? (
+                        <EyeOff className="w-4 h-4 stroke-[2.2]" />
+                      ) : (
+                        <Eye className="w-4 h-4 stroke-[2.2]" />
+                      )}
+                    </button>
                   </div>
+                  {errors?.confirmPin && (
+                    <p className="text-xs font-bold text-rose-500 pl-1">{errors.confirmPin}</p>
+                  )}
                 </div>
               </div>
 
@@ -307,7 +462,7 @@ const RegisterPage = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-70 text-white font-extrabold text-base rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer mt-2"
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed text-white font-extrabold text-base rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer mt-2"
               >
                 {loading ? (
                   <>
@@ -326,7 +481,7 @@ const RegisterPage = () => {
 
           {/* STEP 2: EMAIL OTP VERIFICATION */}
           {step === 2 && (
-            <form onSubmit={handleVerifyOtp} className="space-y-5 animate-fadeIn">
+            <form onSubmit={handleVerifyOtp} className="space-y-5 animate-fadeIn" noValidate>
               <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1">
                 <div className="flex items-center gap-2 text-emerald-800 font-extrabold text-sm">
                   <Mail className="w-4 h-4 text-emerald-600" />
@@ -345,18 +500,29 @@ const RegisterPage = () => {
                   type="text"
                   maxLength={6}
                   required
+                  disabled={loading}
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
+                  onChange={(e) => {
+                    setOtp(e.target.value);
+                    clearFieldError('otp');
+                  }}
                   placeholder="1234"
-                  className="w-48 mx-auto p-3.5 bg-white border-2 border-emerald-500 rounded-2xl text-center text-2xl font-black font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-sm"
+                  className={`w-48 mx-auto p-3.5 bg-white border-2 rounded-2xl text-center text-2xl font-black font-mono tracking-widest focus:outline-none focus:ring-2 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed ${
+                    errors?.otp
+                      ? 'border-rose-500 focus:ring-rose-600 bg-rose-50/50'
+                      : 'border-emerald-500 focus:ring-emerald-600'
+                  }`}
                 />
+                {errors?.otp && (
+                  <p className="text-xs font-bold text-rose-500">{errors.otp}</p>
+                )}
               </div>
 
               <div className="space-y-2.5 pt-2">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-70 text-white font-extrabold text-base rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed text-white font-extrabold text-base rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
                   {loading ? (
                     <>

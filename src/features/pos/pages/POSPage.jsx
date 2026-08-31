@@ -31,7 +31,13 @@ import ProductScanner from '../../../components/scanner/ProductScanner';
 const POSPage = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const authUser = useSelector((state) => state.auth?.user || {});
   const settings = useSelector((state) => state.settings || {});
+
+  const currentStoreName = authUser?.storeName || settings?.storeName || 'GoGrocery';
+  const currentAddress = authUser?.address || settings?.address || 'Plot 21, Market Road, Bhubaneswar';
+  const currentPhone = authUser?.phone || settings?.phone || '7846807407';
+  const currentGstin = authUser?.gstin || settings?.gstin || '21ABCDE1234F1Z5';
 
   const [activeTab, setActiveTab] = useState('menu'); // 'menu', 'scan', 'cartDrawer'
   const [showSearch, setShowSearch] = useState(false); // Toggles in-page search & catalog list
@@ -111,10 +117,10 @@ const POSPage = () => {
       discount,
       total: grandTotal,
       paymentMode,
-      storeName: settings.storeName || 'GoGrocery',
-      address: settings.address || 'Plot 21, Market Road, Bhubaneswar',
-      phone: settings.phone || '7846807407',
-      gstin: settings.gstin || '21ABCDE1234F1Z5',
+      storeName: currentStoreName,
+      address: currentAddress,
+      phone: currentPhone,
+      gstin: currentGstin,
       itemsCount: cartItemsCount,
       items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price })),
     };
@@ -131,13 +137,6 @@ const POSPage = () => {
     setCompletedInvoice(null);
     setPaymentMode('UPI');
   };
-
-  const filteredProducts = INITIAL_PRODUCTS.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.barcode.includes(search) ||
-      p.category.toLowerCase().includes(search.toLowerCase())
-  );
 
   return (
     <div className="max-w-xl mx-auto space-y-6 relative pb-20">
@@ -182,7 +181,7 @@ const POSPage = () => {
             </span>
             <p className="text-4xl font-black font-mono tracking-tight">₹{grandTotal}</p>
             <p className="text-xs font-semibold text-emerald-100">
-              {cartItemsCount} {t('items')} · {settings.storeName || 'GoGrocery'}
+              {cartItemsCount} {t('items')} · {currentStoreName}
             </p>
           </div>
 
