@@ -222,10 +222,11 @@ export const translations = {
     authenticatingStore: 'Authenticating your store account...',
     registeringStore: 'Registering Store...',
     sendingOtpSubtext: 'Encrypting store data & sending OTP to your email...',
-    verifyingOtp: 'Verifying OTP...',
-    verifyingOtpSubtext: 'Verifying security code and configuring your store...',
-    resendingOtp: 'Resending OTP...',
-    resendingOtpSubtext: 'Sending fresh verification code to your email...',
+    // Restock Modal
+    existingItemFound: 'Existing Item Found',
+    quickAdd: 'Quick Add:',
+    addStockQuantityBtn: 'Add +{{qty}} Stock',
+    updatingStock: 'Updating...',
   },
   or: {
     appName: 'ଗୋ ଗ୍ରୋସେରୀ',
@@ -453,5 +454,10 @@ export const translations = {
     verifyingOtpSubtext: 'କୋଡ୍ ଯାଞ୍ଚ କରି ଆପଣଙ୍କ ଦୋକାନ ସେଟ୍ କରାଯାଉଛି...',
     resendingOtp: 'ପୁନର୍ବାର OTP ପଠାଯାଉଛି...',
     resendingOtpSubtext: 'ଆପଣଙ୍କ ଇମେଲ୍ କୁ ନୂଆ OTP ପଠାଯାଉଛି...',
+    // Restock Modal
+    existingItemFound: 'ଉପଲବ୍ଧ ଉତ୍ପାଦ ମିଳିଲା',
+    quickAdd: 'ଶୀଘ୍ର ଯୋଡନ୍ତୁ:',
+    addStockQuantityBtn: '+{{qty}} ଷ୍ଟକ୍ ଯୋଡନ୍ତୁ',
+    updatingStock: 'ଅଦ୍ୟତନ ହେଉଛି...',
   },
 };

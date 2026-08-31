@@ -12,6 +12,7 @@ import {
   RefreshCw,
   ShoppingBag,
   Usb,
+  Loader2,
 } from 'lucide-react';
 import CameraScanner from './CameraScanner';
 import ManualScanner from './ManualScanner';
@@ -19,7 +20,8 @@ import { hasMediaDevicesSupport, isMobileOrTablet } from './scannerUtils';
 import { productService } from '../../features/products/services/productService';
 
 const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isOdia = i18n?.language === 'or';
   const navigate = useNavigate();
 
   const [mode, setMode] = useState('camera'); // 'camera' | 'manual'
@@ -38,15 +40,14 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose }) 
   }, [mediaSupported]);
 
   // Handle Scan Event from Camera or Manual input
-  const handleScanEvent = (result) => {
+  const handleScanEvent = async (result) => {
     setScanResult(result);
     if (onScan) onScan(result);
 
     // Query Product Service / API
     setIsSearching(true);
-    const product = productService.getProductByBarcode(result.value);
-
-    setTimeout(() => {
+    try {
+      const product = await productService.getProductByBarcode(result.value);
       setIsSearching(false);
       if (product) {
         setFoundProduct(product);
@@ -55,7 +56,11 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose }) 
         setFoundProduct(null);
         if (onProductNotFound) onProductNotFound(result);
       }
-    }, 200);
+    } catch (err) {
+      setIsSearching(false);
+      setFoundProduct(null);
+      if (onProductNotFound) onProductNotFound(result);
+    }
   };
 
   const handleScanAgain = () => {
@@ -150,13 +155,30 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose }) 
             </span>
           </div>
 
-          {/* PRODUCT FOUND STATE */}
-          {foundProduct ? (
+          {/* SEARCHING / LOOKUP STATE */}
+          {isSearching ? (
+            <div className="p-8 rounded-3xl bg-blue-50/90 border-2 border-blue-200/90 space-y-3.5 text-center shadow-xs animate-fadeIn">
+              <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-3xl flex items-center justify-center mx-auto border border-blue-200">
+                <Loader2 className="w-7 h-7 animate-spin" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-lg font-black text-slate-900">
+                  {isOdia ? 'ଦୋକାନ ତଥ୍ୟ ଯାଞ୍ଚ ହେଉଛି...' : 'Checking Store Database...'}
+                </h4>
+                <p className="text-xs text-slate-600 font-semibold">
+                  {isOdia
+                    ? 'ଦୟାକରି ଅପେକ୍ଷା କରନ୍ତୁ, ବାରକୋଡ୍ ଯାଞ୍ଚ କରାଯାଉଛି...'
+                    : 'Looking up scanned barcode in catalog...'}
+                </p>
+              </div>
+            </div>
+          ) : foundProduct ? (
+            /* PRODUCT FOUND STATE */
             <div className="p-5 rounded-3xl bg-emerald-50 border-2 border-emerald-200 space-y-3 shadow-xs">
               <div className="flex items-center justify-between border-b border-emerald-200/80 pb-2">
                 <span className="text-xs font-extrabold uppercase text-emerald-800 flex items-center gap-1.5">
                   <CheckCircle className="w-4 h-4 text-emerald-600" />
-                  Product Found
+                  {isOdia ? 'ଉତ୍ପାଦ ମିଳିଲା' : 'Product Found'}
                 </span>
                 <span className="text-xs font-black text-emerald-900 bg-emerald-200/70 px-2.5 py-1 rounded-lg">
                   {foundProduct.category}
@@ -181,7 +203,7 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose }) 
                   className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-sm flex items-center gap-1.5 cursor-pointer"
                 >
                   <ShoppingBag className="w-4 h-4" />
-                  <span>Select Product</span>
+                  <span>{isOdia ? 'ଉତ୍ପାଦ ବାଛନ୍ତୁ' : 'Select Product'}</span>
                 </button>
               </div>
             </div>
@@ -195,7 +217,11 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose }) 
               <div>
                 <h4 className="text-lg font-black text-amber-950">{t('productNotFound')}</h4>
                 <p className="text-xs text-amber-800 font-semibold mt-1">
-                  Barcode <strong className="font-mono text-slate-900">{scanResult.value}</strong> is not listed in catalog.
+                  {isOdia ? (
+                    <>ବାରକୋଡ୍ <strong className="font-mono text-slate-900">{scanResult.value}</strong> କାଟାଲଗ୍ ରେ ଉପଲବ୍ଧ ନାହିଁ।</>
+                  ) : (
+                    <>Barcode <strong className="font-mono text-slate-900">{scanResult.value}</strong> is not listed in catalog.</>
+                  )}
                 </p>
               </div>
 

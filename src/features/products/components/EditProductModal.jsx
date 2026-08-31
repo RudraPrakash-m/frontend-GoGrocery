@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Edit, Save, X, Barcode, Tag, DollarSign, Package } from 'lucide-react';
+import { Edit, Save, X, Barcode, Loader2, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { validateNewProductForm } from '../validation/productValidation';
 
 const EditProductModal = ({ isOpen, product, onSave, onClose }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isOdia = i18n?.language === 'or';
 
   const [name, setName] = useState('');
   const [barcode, setBarcode] = useState('');
@@ -13,34 +16,85 @@ const EditProductModal = ({ isOpen, product, onSave, onClose }) => {
   const [sellingPrice, setSellingPrice] = useState('');
   const [stock, setStock] = useState('');
   const [unit, setUnit] = useState('Pcs');
+  const [minStock, setMinStock] = useState('5');
+
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (product) {
       setName(product.name || '');
       setBarcode(product.barcode || '');
       setCategory(product.category || 'Grocery');
-      setPurchasePrice(product.purchasePrice || '');
-      setSellingPrice(product.sellingPrice || '');
-      setStock(product.stock !== undefined ? product.stock : '');
+      setPurchasePrice(
+        product.purchasePrice !== undefined && product.purchasePrice !== null
+          ? String(product.purchasePrice)
+          : ''
+      );
+      setSellingPrice(
+        product.sellingPrice !== undefined && product.sellingPrice !== null
+          ? String(product.sellingPrice)
+          : ''
+      );
+      setStock(product.stock !== undefined && product.stock !== null ? String(product.stock) : '');
       setUnit(product.unit || 'Pcs');
+      setMinStock(
+        product.minStock !== undefined && product.minStock !== null
+          ? String(product.minStock)
+          : '5'
+      );
+      setErrors({});
     }
-  }, [product]);
+  }, [product, isOpen]);
 
   if (!isOpen || !product) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const updated = {
-      ...product,
+
+    const formValues = {
       name,
-      barcode,
+      sellingPrice,
+      purchasePrice,
+      stock,
       category,
-      purchasePrice: parseFloat(purchasePrice) || 0,
-      sellingPrice: parseFloat(sellingPrice) || 0,
-      stock: parseInt(stock, 10) || 0,
       unit,
+      barcode,
     };
-    onSave(updated);
+
+    // Client-side validation
+    const validation = validateNewProductForm(formValues);
+    if (!validation.isValid) {
+      setErrors(validation.errors);
+      const firstErr = Object.values(validation.errors)[0];
+      toast.error(firstErr);
+      return;
+    }
+
+    setErrors({});
+    setSubmitting(true);
+
+    try {
+      const updated = {
+        ...product,
+        id: product.id || product._id,
+        _id: product._id || product.id,
+        name: name.trim(),
+        barcode: barcode ? barcode.trim() : undefined,
+        category,
+        purchasePrice: purchasePrice !== '' ? parseFloat(purchasePrice) : 0,
+        sellingPrice: parseFloat(sellingPrice),
+        stock: parseInt(stock, 10) || 0,
+        unit,
+        minStock: parseInt(minStock, 10) || 5,
+      };
+
+      await onSave(updated);
+    } catch (err) {
+      console.error('Error submitting edit:', err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return createPortal(
@@ -48,8 +102,9 @@ const EditProductModal = ({ isOpen, product, onSave, onClose }) => {
       <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-5 my-auto relative animate-fadeIn">
         <button
           type="button"
+          disabled={submitting}
           onClick={onClose}
-          className="absolute top-4 right-4 w-9 h-9 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+          className="absolute top-4 right-4 w-9 h-9 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
         >
           <X className="w-5 h-5" />
         </button>
@@ -59,75 +114,104 @@ const EditProductModal = ({ isOpen, product, onSave, onClose }) => {
             <Edit className="w-5 h-5 stroke-[2.2]" />
           </div>
           <div>
-            <h3 className="font-black text-slate-900 text-base">{t('editProduct')}</h3>
-            <p className="text-xs text-slate-500 font-semibold">Modify product specifications and stock details</p>
+            <h3 className="font-black text-slate-900 text-base">{t('editProduct') || 'Edit Product'}</h3>
+            <p className="text-xs text-slate-500 font-semibold">
+              {isOdia
+                ? 'ଉତ୍ପାଦ ବିବରଣୀ ଏବଂ ଷ୍ଟକ୍ ସମ୍ପାଦନା କରନ୍ତୁ'
+                : 'Modify product specifications and stock details'}
+            </p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           {/* Barcode Field */}
           <div className="space-y-1.5">
             <label className="block text-xs font-extrabold uppercase text-slate-700">
-              {t('barcode')}
+              {t('barcode') || 'Barcode'}
             </label>
             <div className="relative">
               <Barcode className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
               <input
                 type="text"
-                required
+                disabled={submitting}
                 value={barcode}
-                onChange={(e) => setBarcode(e.target.value)}
-                className="w-full pl-10 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-mono font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+                onChange={(e) => {
+                  setBarcode(e.target.value);
+                  if (errors.barcode) setErrors((prev) => ({ ...prev, barcode: null }));
+                }}
+                className={`w-full pl-10 pr-3 py-3 bg-slate-50 border rounded-2xl text-slate-900 font-mono font-extrabold text-sm focus:outline-none focus:ring-2 focus:bg-white disabled:opacity-60 transition-all ${
+                  errors.barcode
+                    ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
+                    : 'border-slate-200 focus:ring-emerald-500'
+                }`}
               />
             </div>
+            {errors.barcode && (
+              <p className="text-xs font-bold text-rose-500 pl-1">{errors.barcode}</p>
+            )}
           </div>
 
           {/* Product Name */}
           <div className="space-y-1.5">
             <label className="block text-xs font-extrabold uppercase text-slate-700">
-              {t('productName')} *
+              {t('productName') || 'Product Name'} *
             </label>
             <input
               type="text"
               required
+              disabled={submitting}
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+              onChange={(e) => {
+                setName(e.target.value);
+                if (errors.name) setErrors((prev) => ({ ...prev, name: null }));
+              }}
+              className={`w-full p-3 bg-slate-50 border rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:bg-white disabled:opacity-60 transition-all ${
+                errors.name
+                  ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
+                  : 'border-slate-200 focus:ring-emerald-500'
+              }`}
             />
+            {errors.name && <p className="text-xs font-bold text-rose-500 pl-1">{errors.name}</p>}
           </div>
 
           {/* Category & Unit */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="block text-xs font-extrabold uppercase text-slate-700">
-                {t('category')}
+                {t('category') || 'Category'} *
               </label>
               <select
                 value={category}
+                disabled={submitting}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 cursor-pointer"
               >
                 <option value="Grocery">Grocery</option>
                 <option value="Dairy">Dairy</option>
                 <option value="Snacks">Snacks</option>
+                <option value="Beverages">Beverages</option>
                 <option value="Personal Care">Personal Care</option>
+                <option value="Household">Household</option>
               </select>
             </div>
 
             <div className="space-y-1.5">
               <label className="block text-xs font-extrabold uppercase text-slate-700">
-                {t('unit')}
+                {t('unit') || 'Unit'} *
               </label>
               <select
                 value={unit}
+                disabled={submitting}
                 onChange={(e) => setUnit(e.target.value)}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 cursor-pointer"
               >
-                <option value="Pcs">Pcs</option>
-                <option value="Kg">Kg</option>
-                <option value="Litre">Litre</option>
-                <option value="Packet">Packet</option>
-                <option value="Pack">Pack</option>
+                <option value="Pcs">Pcs (Piece)</option>
+                <option value="Kg">Kg (Kilogram)</option>
+                <option value="G">G (Gram)</option>
+                <option value="L">L (Litre)</option>
+                <option value="Ml">Ml (Millilitre)</option>
+                <option value="Pack">Pack (Packet)</option>
+                <option value="Dozen">Dozen</option>
               </select>
             </div>
           </div>
@@ -136,60 +220,127 @@ const EditProductModal = ({ isOpen, product, onSave, onClose }) => {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="block text-xs font-extrabold uppercase text-slate-700">
-                {t('purchasePrice')} (₹)
+                {t('purchasePrice') || 'Cost Price'} (₹)
               </label>
               <input
                 type="number"
+                min="0"
+                step="0.01"
+                disabled={submitting}
                 value={purchasePrice}
-                onChange={(e) => setPurchasePrice(e.target.value)}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                onChange={(e) => {
+                  setPurchasePrice(e.target.value);
+                  if (errors.purchasePrice)
+                    setErrors((prev) => ({ ...prev, purchasePrice: null }));
+                }}
+                className={`w-full p-3 bg-slate-50 border rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 disabled:opacity-60 ${
+                  errors.purchasePrice
+                    ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
+                    : 'border-slate-200 focus:ring-emerald-500'
+                }`}
               />
+              {errors.purchasePrice && (
+                <p className="text-[11px] font-bold text-rose-500 pl-1">{errors.purchasePrice}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <label className="block text-xs font-extrabold uppercase text-slate-700">
-                {t('sellingPrice')} (₹) *
+                {t('sellingPrice') || 'Selling Price'} (₹) *
               </label>
               <input
                 type="number"
+                min="0"
+                step="0.01"
                 required
+                disabled={submitting}
                 value={sellingPrice}
-                onChange={(e) => setSellingPrice(e.target.value)}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                onChange={(e) => {
+                  setSellingPrice(e.target.value);
+                  if (errors.sellingPrice) setErrors((prev) => ({ ...prev, sellingPrice: null }));
+                }}
+                className={`w-full p-3 bg-slate-50 border rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 disabled:opacity-60 ${
+                  errors.sellingPrice
+                    ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
+                    : 'border-slate-200 focus:ring-emerald-500'
+                }`}
               />
+              {errors.sellingPrice && (
+                <p className="text-[11px] font-bold text-rose-500 pl-1">{errors.sellingPrice}</p>
+              )}
             </div>
           </div>
 
-          {/* Stock Quantity */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-extrabold uppercase text-slate-700">
-              {t('stock')} {t('quantityToAdd')}
-            </label>
-            <input
-              type="number"
-              required
-              value={stock}
-              onChange={(e) => setStock(e.target.value)}
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-black text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
+          {/* Stock Quantity & Min Stock Threshold */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-extrabold uppercase text-slate-700">
+                {t('stock') || 'Stock'} ({unit}) *
+              </label>
+              <input
+                type="number"
+                min="0"
+                required
+                disabled={submitting}
+                value={stock}
+                onChange={(e) => {
+                  setStock(e.target.value);
+                  if (errors.stock) setErrors((prev) => ({ ...prev, stock: null }));
+                }}
+                className={`w-full p-3 bg-slate-50 border rounded-2xl text-slate-900 font-black text-base focus:outline-none focus:ring-2 disabled:opacity-60 ${
+                  errors.stock
+                    ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
+                    : 'border-slate-200 focus:ring-emerald-500'
+                }`}
+              />
+              {errors.stock && (
+                <p className="text-xs font-bold text-rose-500 pl-1">{errors.stock}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-extrabold uppercase text-slate-700">
+                {t('minStock') || 'Low Stock Alert'} ({unit})
+              </label>
+              <input
+                type="number"
+                min="0"
+                disabled={submitting}
+                value={minStock}
+                onChange={(e) => setMinStock(e.target.value)}
+                placeholder="5"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60"
+              />
+            </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-2">
             <button
               type="button"
+              disabled={submitting}
               onClick={onClose}
-              className="w-1/3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl cursor-pointer transition-colors"
+              className="w-1/3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl cursor-pointer transition-colors disabled:opacity-50"
             >
-              {t('cancel')}
+              {t('cancel') || 'Cancel'}
             </button>
 
             <button
               type="submit"
-              className="w-2/3 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-2xl shadow-md shadow-emerald-600/30 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              disabled={submitting}
+              className="w-2/3 py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-sm rounded-2xl shadow-md shadow-emerald-600/30 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
             >
-              <Save className="w-4 h-4" />
-              <span>{t('save')} {t('products')}</span>
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>{isOdia ? 'ସେଭ୍ ହେଉଛି...' : 'Saving...'}</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>{isOdia ? 'ଉତ୍ପାଦ ସେଭ୍ କରନ୍ତୁ' : (t('saveProduct') || 'Save Product')}</span>
+                </>
+              )}
             </button>
           </div>
         </form>
