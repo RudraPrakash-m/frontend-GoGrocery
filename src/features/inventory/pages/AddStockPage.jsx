@@ -15,6 +15,7 @@ import {
   Barcode,
 } from 'lucide-react';
 import { INITIAL_PRODUCTS } from '../../../constants/mockProducts';
+import ProductScanner from '../../../components/scanner/ProductScanner';
 
 const AddStockPage = () => {
   const { t, i18n } = useTranslation();
@@ -23,7 +24,7 @@ const AddStockPage = () => {
   const [activeTab, setActiveTab] = useState('menu'); // 'menu', 'scanExisting', 'createProductModal'
   const [products, setProducts] = useState(INITIAL_PRODUCTS);
 
-  // Search Existing Product for Quick Restock
+  // Search / Scan Product for Quick Restock
   const [searchQuery, setSearchQuery] = useState('');
   const [foundProduct, setFoundProduct] = useState(null);
   const [quantityToAdd, setQuantityToAdd] = useState(10);
@@ -66,6 +67,7 @@ const AddStockPage = () => {
     toast.success(t('stockUpdated'));
 
     setFoundProduct(null);
+    setActiveTab('menu');
     setTimeout(() => {
       setStockUpdateSuccess(null);
     }, 2500);
@@ -142,7 +144,10 @@ const AddStockPage = () => {
         {/* Card 1: Restock Existing Stock */}
         <button
           type="button"
-          onClick={() => setActiveTab('scanExisting')}
+          onClick={() => {
+            setFoundProduct(null);
+            setActiveTab('scanExisting');
+          }}
           className="bg-white border-2 border-slate-200/90 hover:border-emerald-500 rounded-3xl p-6 shadow-xs hover:shadow-md transition-all text-left flex flex-col justify-between space-y-4 group cursor-pointer"
         >
           <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center border border-emerald-100 group-hover:scale-105 transition-transform">
@@ -183,75 +188,42 @@ const AddStockPage = () => {
         </button>
       </div>
 
-      {/* QUICK RESTOCK SEARCH & SELECTION MODAL PORTAL */}
+      {/* QUICK RESTOCK CAMERA & SEARCH SCANNER PORTAL */}
       {activeTab === 'scanExisting' &&
         createPortal(
-          <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[99999] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-5 my-auto relative animate-fadeIn">
-              <button
-                type="button"
-                onClick={() => {
+          <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[99999] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+            {!foundProduct ? (
+              <ProductScanner
+                onProductFound={(prod) => {
+                  handleSelectProductToRestock(prod);
+                }}
+                onClose={() => {
                   setActiveTab('menu');
                   setFoundProduct(null);
                 }}
-                className="absolute top-4 right-4 w-9 h-9 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              />
+            ) : (
+              /* RESTOCK QUANTITY FORM AFTER PRODUCT IS SCANNED */
+              <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-5 my-auto relative animate-fadeIn">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('menu');
+                    setFoundProduct(null);
+                  }}
+                  className="absolute top-4 right-4 w-9 h-9 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
 
-              <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-                <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
-                  <Scan className="w-5 h-5 stroke-[2.2]" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-slate-900 text-base">{t('quickRestockTitle')}</h3>
-                  <p className="text-xs text-slate-500 font-semibold">{t('searchByNameOrBarcode')}</p>
-                </div>
-              </div>
-
-              {!foundProduct ? (
-                <div className="space-y-4">
-                  <div className="relative">
-                    <Search className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={t('searchPlaceholder')}
-                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
-                    />
-                  </div>
-
-                  <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto pr-1">
-                    {searchFilteredProducts.map((prod) => (
-                      <button
-                        key={prod.id}
-                        type="button"
-                        onClick={() => handleSelectProductToRestock(prod)}
-                        className="w-full py-3 px-2 flex items-center justify-between text-left hover:bg-slate-50 rounded-xl transition-colors cursor-pointer"
-                      >
-                        <div>
-                          <p className="font-extrabold text-slate-900 text-sm">{prod.name}</p>
-                          <p className="text-xs text-slate-500 font-semibold">
-                            {t('barcode')}: {prod.barcode}
-                          </p>
-                        </div>
-                        <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
-                          {t('stock')}: {prod.stock} {prod.unit}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <form onSubmit={handleUpdateStockSubmit} className="space-y-4 animate-fadeIn">
+                <form onSubmit={handleUpdateStockSubmit} className="space-y-4">
                   <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1">
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-extrabold text-slate-900 text-base">{foundProduct.name}</h4>
                         <p className="text-xs text-slate-500 font-semibold">{t('barcode')}: {foundProduct.barcode}</p>
                       </div>
-                      <span className="text-xs font-black text-emerald-800 bg-emerald-200/80 px-2.5 py-1 rounded-md">
+                      <span className="text-xs font-black text-emerald-800 bg-emerald-200/80 px-2.5 py-1 rounded-lg">
                         {t('currentStock')}: {foundProduct.stock} {foundProduct.unit}
                       </span>
                     </div>
@@ -288,8 +260,8 @@ const AddStockPage = () => {
                     </button>
                   </div>
                 </form>
-              )}
-            </div>
+              </div>
+            )}
           </div>,
           document.body
         )}
