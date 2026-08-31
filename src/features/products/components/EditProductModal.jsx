@@ -98,7 +98,12 @@ const EditProductModal = ({ isOpen, product, onSave, onClose }) => {
   };
 
   return createPortal(
-    <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[999999] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('editProduct') || 'Edit Product'}
+      className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[999999] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+    >
       <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-5 my-auto relative animate-fadeIn">
         <button
           type="button"

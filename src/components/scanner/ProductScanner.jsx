@@ -69,7 +69,11 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose }) 
   };
 
   return (
-    <div className="bg-white rounded-3xl p-5 md:p-6 max-w-lg w-full border border-slate-200 shadow-2xl space-y-5 relative my-auto animate-fadeIn">
+    <div
+      role="region"
+      aria-label={t('scanProduct') || 'Product Scanner'}
+      className="bg-white rounded-3xl p-5 md:p-6 max-w-lg w-full border border-slate-200 shadow-2xl space-y-5 relative my-auto animate-fadeIn"
+    >
       {/* Header & Close Button */}
       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
         <div className="flex items-center gap-3">

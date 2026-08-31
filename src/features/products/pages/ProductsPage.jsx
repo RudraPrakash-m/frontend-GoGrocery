@@ -1,53 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Plus, Package, Edit, Trash2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-import { productService } from '../services/productService';
+import { Plus, Package, Edit, Trash2, Loader2, RefreshCw } from 'lucide-react';
 import ProductSearchBar from '../components/ProductSearchBar';
 import EditProductModal from '../components/EditProductModal';
 import ConfirmModal from '../../../components/common/ConfirmModal';
+import { useProducts, useUpdateProduct, useDeleteProduct } from '../hooks/useProductsQuery';
+import useDebounce from '../../../hooks/useDebounce';
+import useDocumentTitle from '../../../hooks/useDocumentTitle';
 
 const ProductsPage = () => {
   const { t, i18n } = useTranslation();
   const isOdia = i18n?.language === 'or';
   const navigate = useNavigate();
 
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  useDocumentTitle(isOdia ? 'ଉତ୍ପାଦ ଏବଂ ଇନଭେଣ୍ଟୋରୀ' : 'Products & Inventory');
+
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+
+  // Debounced search for smooth 60fps filtering without UI lag
+  const debouncedSearch = useDebounce(search, 250);
+
+  // TanStack React Query for product catalog fetching & background sync
+  const {
+    data: rawProducts = [],
+    isLoading,
+    isRefetching,
+    refetch,
+  } = useProducts();
+
+  // TanStack Mutations for update & delete with automatic query invalidation
+  const updateProductMutation = useUpdateProduct();
+  const deleteProductMutation = useDeleteProduct();
 
   // Modal States
   const [editingProduct, setEditingProduct] = useState(null);
   const [pendingEditProduct, setPendingEditProduct] = useState(null);
   const [deletingProductId, setDeletingProductId] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false);
 
-  const loadProducts = async () => {
-    setLoading(true);
-    try {
-      const data = await productService.getProducts();
-      setProducts(data || []);
-    } catch (err) {
-      console.error('Failed to load products:', err);
-      toast.error(
-        isOdia ? 'ଉତ୍ପାଦ ତାଲିକା ଲୋଡ୍ କରିବାରେ ତ୍ରୁଟି ଘଟିଲା' : 'Failed to load product catalog'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadProducts();
-  }, []);
+  const products = Array.isArray(rawProducts) ? rawProducts : [];
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
-      p.name?.toLowerCase().includes(search.toLowerCase()) ||
-      p.barcode?.includes(search) ||
-      p.category?.toLowerCase().includes(search.toLowerCase());
+      !debouncedSearch ||
+      p.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      p.barcode?.includes(debouncedSearch) ||
+      p.category?.toLowerCase().includes(debouncedSearch.toLowerCase());
 
     if (!matchesSearch) return false;
     const min = p.minStock !== undefined ? p.minStock : 5;
@@ -68,19 +68,17 @@ const ProductsPage = () => {
     setPendingEditProduct(updatedProduct);
   };
 
-  // Called when user confirms save inside ConfirmModal -> sends AES-256 encrypted PUT /api/products/:id
+  // Called when user confirms save inside ConfirmModal -> sends AES-256 encrypted PUT via React Query
   const handleConfirmEditSave = async () => {
     if (!pendingEditProduct) return;
     const prodId = pendingEditProduct.id || pendingEditProduct._id;
-    setActionLoading(true);
 
     try {
-      const res = await productService.updateProduct(prodId, pendingEditProduct);
+      const res = await updateProductMutation.mutateAsync({
+        id: prodId,
+        data: pendingEditProduct,
+      });
       const updated = res?.data || pendingEditProduct;
-
-      setProducts((prev) =>
-        prev.map((p) => (p.id === prodId || p._id === prodId ? { ...p, ...updated } : p))
-      );
       setPendingEditProduct(null);
 
       if (isOdia) {
@@ -97,21 +95,15 @@ const ProductsPage = () => {
         err?.message ||
         (isOdia ? 'ଉତ୍ପାଦ ଅଦ୍ୟତନ କରିବାରେ ତ୍ରୁଟି ଘଟିଲା' : 'Failed to update product');
       toast.error(errorMsg);
-    } finally {
-      setActionLoading(false);
     }
   };
 
-  // Called when user confirms delete inside ConfirmModal -> sends DELETE /api/products/:id
+  // Called when user confirms delete inside ConfirmModal -> sends DELETE via React Query
   const handleConfirmDelete = async () => {
     if (!deletingProductId) return;
-    setActionLoading(true);
 
     try {
-      await productService.deleteProduct(deletingProductId);
-      setProducts((prev) =>
-        prev.filter((p) => p.id !== deletingProductId && p._id !== deletingProductId)
-      );
+      await deleteProductMutation.mutateAsync(deletingProductId);
       setDeletingProductId(null);
 
       if (isOdia) {
@@ -125,10 +117,10 @@ const ProductsPage = () => {
         err?.message ||
         (isOdia ? 'ଉତ୍ପାଦ ଡିଲିଟ୍ କରିବାରେ ତ୍ରୁଟି ଘଟିଲା' : 'Failed to delete product');
       toast.error(errorMsg);
-    } finally {
-      setActionLoading(false);
     }
   };
+
+  const isActionLoading = updateProductMutation.isPending || deleteProductMutation.isPending;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -148,12 +140,12 @@ const ProductsPage = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={loadProducts}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isLoading || isRefetching}
             className="p-2.5 bg-white border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl shadow-2xs hover:bg-slate-50 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
             title="Refresh Catalog"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isLoading || isRefetching ? 'animate-spin' : ''}`} />
           </button>
 
           <button
@@ -168,7 +160,7 @@ const ProductsPage = () => {
 
       {/* Main Container */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        {/* Search & Filter Bar Component */}
+        {/* Search & Filter Bar Component with Debounce */}
         <ProductSearchBar
           search={search}
           setSearch={setSearch}
@@ -196,7 +188,7 @@ const ProductsPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-              {loading ? (
+              {isLoading ? (
                 <tr>
                   <td colSpan={5} className="py-16 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-3">
@@ -218,8 +210,8 @@ const ProductsPage = () => {
                         {t('noProductsFound') || 'No Products Found'}
                       </p>
                       <p className="text-xs text-slate-400">
-                        {search
-                          ? `No matches found for "${search}". Try searching with another keyword or barcode.`
+                        {debouncedSearch
+                          ? `No matches found for "${debouncedSearch}". Try searching with another keyword or barcode.`
                           : 'No items in this category yet. Click "Add / Restock" to register products.'}
                       </p>
                     </div>
@@ -324,7 +316,7 @@ const ProductsPage = () => {
             : t('confirmEditMessage') || 'Are you sure you want to save changes to this product?'
         }
         variant="info"
-        confirmText={actionLoading ? 'Saving...' : t('save') || 'Save'}
+        confirmText={isActionLoading ? 'Saving...' : t('save') || 'Save'}
         cancelText={t('cancel') || 'Cancel'}
         onConfirm={handleConfirmEditSave}
         onCancel={() => setPendingEditProduct(null)}
@@ -341,7 +333,7 @@ const ProductsPage = () => {
               'Are you sure you want to delete this product from catalog?'
         }
         variant="danger"
-        confirmText={actionLoading ? 'Deleting...' : t('delete') || 'Delete'}
+        confirmText={isActionLoading ? 'Deleting...' : t('delete') || 'Delete'}
         cancelText={t('cancel') || 'Cancel'}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeletingProductId(null)}

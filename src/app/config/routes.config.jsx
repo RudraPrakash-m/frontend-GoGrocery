@@ -1,25 +1,34 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 
 import MainLayout from '../../components/layout/MainLayout';
-import LoginPage from '../../features/auth/pages/LoginPage';
-import RegisterPage from '../../features/auth/pages/RegisterPage';
-import ForgotPasswordPage from '../../features/auth/pages/ForgotPasswordPage';
-import DashboardPage from '../../features/dashboard/pages/DashboardPage';
-import POSPage from '../../features/pos/pages/POSPage';
-import AddStockPage from '../../features/inventory/pages/AddStockPage';
-import ProductsPage from '../../features/products/pages/ProductsPage';
-import SalesPage from '../../features/sales/pages/SalesPage';
-import ReportsPage from '../../features/reports/pages/ReportsPage';
-import SettingsPage from '../../features/settings/pages/SettingsPage';
-import HelpPage from '../../features/help/pages/HelpPage';
-import MorePage from '../../features/more/pages/MorePage';
-import ErrorPage from '../../features/error/pages/ErrorPage';
 import Loader from '../../components/common/Loader';
 import { authService } from '../../features/auth/services/authService';
 import { setUserProfile, logout } from '../../features/auth/authSlice';
 import { updateStoreDetails } from '../../features/settings/store/settingsSlice';
+
+// Lazy Loaded Route Chunks for Fast Initial Page Load
+const LoginPage = lazy(() => import('../../features/auth/pages/LoginPage'));
+const RegisterPage = lazy(() => import('../../features/auth/pages/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('../../features/auth/pages/ForgotPasswordPage'));
+const DashboardPage = lazy(() => import('../../features/dashboard/pages/DashboardPage'));
+const POSPage = lazy(() => import('../../features/pos/pages/POSPage'));
+const AddStockPage = lazy(() => import('../../features/inventory/pages/AddStockPage'));
+const ProductsPage = lazy(() => import('../../features/products/pages/ProductsPage'));
+const SalesPage = lazy(() => import('../../features/sales/pages/SalesPage'));
+const ReportsPage = lazy(() => import('../../features/reports/pages/ReportsPage'));
+const SettingsPage = lazy(() => import('../../features/settings/pages/SettingsPage'));
+const HelpPage = lazy(() => import('../../features/help/pages/HelpPage'));
+const MorePage = lazy(() => import('../../features/more/pages/MorePage'));
+const ErrorPage = lazy(() => import('../../features/error/pages/ErrorPage'));
+
+// Helper Wrapper for Suspense Fallbacks
+const LazyRoute = ({ children }) => (
+  <Suspense fallback={<Loader text="Loading page..." />}>
+    {children}
+  </Suspense>
+);
 
 // Protected Route Wrapper for Data Router (Verifies HTTP-Only Cookies & Bearer Tokens)
 const ProtectedLayout = () => {
@@ -76,65 +85,133 @@ const ProtectedLayout = () => {
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: <LoginPage />,
-    errorElement: <ErrorPage />,
+    element: (
+      <LazyRoute>
+        <LoginPage />
+      </LazyRoute>
+    ),
+    errorElement: (
+      <LazyRoute>
+        <ErrorPage />
+      </LazyRoute>
+    ),
   },
   {
     path: '/register',
-    element: <RegisterPage />,
-    errorElement: <ErrorPage />,
+    element: (
+      <LazyRoute>
+        <RegisterPage />
+      </LazyRoute>
+    ),
+    errorElement: (
+      <LazyRoute>
+        <ErrorPage />
+      </LazyRoute>
+    ),
   },
   {
     path: '/forgot-password',
-    element: <ForgotPasswordPage />,
-    errorElement: <ErrorPage />,
+    element: (
+      <LazyRoute>
+        <ForgotPasswordPage />
+      </LazyRoute>
+    ),
+    errorElement: (
+      <LazyRoute>
+        <ErrorPage />
+      </LazyRoute>
+    ),
   },
   {
     path: '/',
     element: <ProtectedLayout />,
-    errorElement: <ErrorPage />,
+    errorElement: (
+      <LazyRoute>
+        <ErrorPage />
+      </LazyRoute>
+    ),
     children: [
       {
         index: true,
-        element: <DashboardPage />,
+        element: (
+          <LazyRoute>
+            <DashboardPage />
+          </LazyRoute>
+        ),
       },
       {
         path: 'pos',
-        element: <POSPage />,
+        element: (
+          <LazyRoute>
+            <POSPage />
+          </LazyRoute>
+        ),
       },
       {
         path: 'inventory/add',
-        element: <AddStockPage />,
+        element: (
+          <LazyRoute>
+            <AddStockPage />
+          </LazyRoute>
+        ),
       },
       {
         path: 'products',
-        element: <ProductsPage />,
+        element: (
+          <LazyRoute>
+            <ProductsPage />
+          </LazyRoute>
+        ),
       },
       {
         path: 'sales',
-        element: <SalesPage />,
+        element: (
+          <LazyRoute>
+            <SalesPage />
+          </LazyRoute>
+        ),
       },
       {
         path: 'reports',
-        element: <ReportsPage />,
+        element: (
+          <LazyRoute>
+            <ReportsPage />
+          </LazyRoute>
+        ),
       },
       {
         path: 'settings',
-        element: <SettingsPage />,
+        element: (
+          <LazyRoute>
+            <SettingsPage />
+          </LazyRoute>
+        ),
       },
       {
         path: 'help',
-        element: <HelpPage />,
+        element: (
+          <LazyRoute>
+            <HelpPage />
+          </LazyRoute>
+        ),
       },
       {
         path: 'more',
-        element: <MorePage />,
+        element: (
+          <LazyRoute>
+            <MorePage />
+          </LazyRoute>
+        ),
       },
     ],
   },
   {
     path: '*',
-    element: <ErrorPage />,
+    element: (
+      <LazyRoute>
+        <ErrorPage />
+      </LazyRoute>
+    ),
   },
 ]);
 

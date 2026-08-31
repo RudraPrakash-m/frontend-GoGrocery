@@ -36,7 +36,12 @@ const ConfirmModal = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[999999] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title || 'Confirmation Dialog'}
+      className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[999999] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4"
+    >
       <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-slate-200 shadow-2xl space-y-4 my-auto relative animate-fadeIn text-center">
         <button
           type="button"

@@ -19,10 +19,13 @@ import {
   validateRestockQty,
   validateNewProductForm,
 } from '../../products/validation/productValidation';
+import useDocumentTitle from '../../../hooks/useDocumentTitle';
 
 const AddStockPage = () => {
   const { t, i18n } = useTranslation();
   const isOdia = i18n.language === 'or';
+
+  useDocumentTitle(isOdia ? 'ଷ୍ଟକ୍ ଯୋଡନ୍ତୁ' : 'Add Stock');
 
   const [activeTab, setActiveTab] = useState('menu'); // 'menu', 'scanExisting', 'createProductModal'
 
