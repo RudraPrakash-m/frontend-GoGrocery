@@ -13,6 +13,7 @@ import {
   Printer,
   Sparkles,
   Barcode,
+  Plus,
 } from 'lucide-react';
 import { INITIAL_PRODUCTS } from '../../../constants/mockProducts';
 import ProductScanner from '../../../components/scanner/ProductScanner';
@@ -27,7 +28,7 @@ const AddStockPage = () => {
   // Search / Scan Product for Quick Restock
   const [searchQuery, setSearchQuery] = useState('');
   const [foundProduct, setFoundProduct] = useState(null);
-  const [quantityToAdd, setQuantityToAdd] = useState(10);
+  const [quantityToAdd, setQuantityToAdd] = useState('1'); // Default to 1
   const [stockUpdateSuccess, setStockUpdateSuccess] = useState(null);
 
   // Create Barcode & Add New Product State
@@ -40,17 +41,31 @@ const AddStockPage = () => {
   const [initialQty, setInitialQty] = useState('10');
   const [createSuccess, setCreateSuccess] = useState(false);
 
-  // Quick Restock Logic
+  // When Existing Product is Scanned/Selected
   const handleSelectProductToRestock = (product) => {
     setFoundProduct(product);
-    setQuantityToAdd(10);
+    setQuantityToAdd('1'); // Default to +1
   };
 
+  // When Scanned Barcode DOES NOT EXIST -> Auto-redirect to New Product Form with barcode pre-filled
+  const handleUnrecognizedBarcodeScanned = (scannedBarcode) => {
+    toast.info(isOdia ? 'ଉତ୍ପାଦ ମିଳିଲା ନାହିଁ। ନୂଆ ଉତ୍ପାଦ ଯୋଡନ୍ତୁ।' : `Barcode ${scannedBarcode} not in catalog. Add new product details below.`);
+    setGeneratedBarcode(scannedBarcode);
+    setProductName('');
+    setSellingPrice('');
+    setPurchasePrice('');
+    setInitialQty('10');
+    setActiveTab('createProductModal');
+  };
+
+  // Restock Existing Product Submit (Increase by entered quantity or default to +1)
   const handleUpdateStockSubmit = (e) => {
     e.preventDefault();
     if (!foundProduct) return;
 
-    const addedAmount = parseInt(quantityToAdd, 10) || 0;
+    const parsedQty = parseInt(quantityToAdd, 10);
+    // If user enters quantity, increase by that quantity; else default to +1
+    const addedAmount = isNaN(parsedQty) || parsedQty <= 0 ? 1 : parsedQty;
     const prevStock = foundProduct.stock;
     const newStockAmount = prevStock + addedAmount;
 
@@ -110,12 +125,6 @@ const AddStockPage = () => {
       setPurchasePrice('');
     }, 2000);
   };
-
-  const searchFilteredProducts = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.barcode.includes(searchQuery)
-  );
 
   return (
     <div className="max-w-xl mx-auto space-y-6 relative pb-20">
@@ -197,13 +206,16 @@ const AddStockPage = () => {
                 onProductFound={(prod) => {
                   handleSelectProductToRestock(prod);
                 }}
+                onProductNotFound={(result) => {
+                  handleUnrecognizedBarcodeScanned(result.value);
+                }}
                 onClose={() => {
                   setActiveTab('menu');
                   setFoundProduct(null);
                 }}
               />
             ) : (
-              /* RESTOCK QUANTITY FORM AFTER PRODUCT IS SCANNED */
+              /* RESTOCK QUANTITY FORM AFTER EXISTING PRODUCT IS SCANNED */
               <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-5 my-auto relative animate-fadeIn">
                 <button
                   type="button"
@@ -229,34 +241,55 @@ const AddStockPage = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
+                  {/* Quantity Input Field with Presets */}
+                  <div className="space-y-2">
                     <label className="block text-xs font-extrabold uppercase text-slate-700">
                       {t('quantityToAdd')} ({foundProduct.unit})
                     </label>
+
                     <input
                       type="number"
-                      required
                       min="1"
+                      placeholder="1 (Default: +1)"
                       value={quantityToAdd}
                       onChange={(e) => setQuantityToAdd(e.target.value)}
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-black text-lg text-center focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+                      className="w-full p-3.5 bg-slate-50 border-2 border-emerald-500 rounded-2xl text-slate-900 font-black text-xl text-center focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white"
                     />
+
+                    {/* Quick Preset Buttons: +1, +5, +10, +50 */}
+                    <div className="flex items-center gap-1.5 justify-center pt-1">
+                      <span className="text-[11px] font-bold text-slate-400">Quick Add:</span>
+                      {['1', '5', '10', '50'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setQuantityToAdd(preset)}
+                          className={`px-3 py-1 rounded-xl text-xs font-black border transition-all cursor-pointer ${
+                            quantityToAdd === preset
+                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                              : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                          }`}
+                        >
+                          +{preset}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="flex gap-2 pt-2">
                     <button
                       type="button"
                       onClick={() => setFoundProduct(null)}
-                      className="w-1/2 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl cursor-pointer"
+                      className="w-1/2 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl cursor-pointer"
                     >
                       {t('cancel')}
                     </button>
 
                     <button
                       type="submit"
-                      className="w-1/2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl shadow-md cursor-pointer"
+                      className="w-1/2 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl shadow-md cursor-pointer"
                     >
-                      {t('save')}
+                      Add +{parseInt(quantityToAdd, 10) || 1} Stock
                     </button>
                   </div>
                 </form>
@@ -305,7 +338,7 @@ const AddStockPage = () => {
                   }}
                   className="space-y-4"
                 >
-                  {/* Generated Barcode Card Box */}
+                  {/* Generated or Scanned Barcode Card Box */}
                   <div className="p-4 rounded-2xl bg-slate-900 text-white space-y-2 text-center shadow-lg">
                     <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-extrabold text-xs uppercase tracking-wider">
                       <Barcode className="w-4 h-4" />
