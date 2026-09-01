@@ -7,18 +7,30 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': [
-            'react',
-            'react-dom',
-            'react-router-dom',
-            '@reduxjs/toolkit',
-            'react-redux',
-          ],
-          'vendor-query': ['@tanstack/react-query'],
-          'vendor-charts': ['recharts'],
-          'vendor-scanner': ['@zxing/library', '@zxing/browser'],
-          'vendor-crypto': ['crypto-js'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (
+              id.includes('/react/') ||
+              id.includes('/react-dom/') ||
+              id.includes('/react-router-dom/') ||
+              id.includes('/@reduxjs/toolkit/') ||
+              id.includes('/react-redux/')
+            ) {
+              return 'vendor-react';
+            }
+            if (id.includes('/@tanstack/react-query/')) {
+              return 'vendor-query';
+            }
+            if (id.includes('/recharts/')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('/@zxing/')) {
+              return 'vendor-scanner';
+            }
+            if (id.includes('/crypto-js/')) {
+              return 'vendor-crypto';
+            }
+          }
         },
       },
     },
