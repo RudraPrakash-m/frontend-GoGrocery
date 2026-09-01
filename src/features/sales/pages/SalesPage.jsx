@@ -2,18 +2,30 @@ import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
-import { Receipt, QrCode, Banknote, CreditCard, Eye, X } from 'lucide-react';
+import { Receipt, QrCode, Banknote, CreditCard, Eye, X, Loader2 } from 'lucide-react';
 import ReceiptBill from '../components/ReceiptBill';
+import { useSalesHistory } from '../hooks/useSalesQuery';
 
 const SalesPage = () => {
   const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
 
-  const salesHistory = useSelector((state) => state.sales.salesHistory || []);
+  const reduxSalesHistory = useSelector((state) => state.sales.salesHistory || []);
+  const { data: salesResponse, isLoading } = useSalesHistory({ tab: filter });
 
-  const totalSalesAmount = salesHistory.reduce((sum, s) => sum + (s.total || 0), 0);
-  const totalSalesCount = salesHistory.length;
+  const apiSales = salesResponse?.data;
+  const apiSummary = salesResponse?.summary;
+
+  const salesHistory = Array.isArray(apiSales) && apiSales.length > 0 ? apiSales : reduxSalesHistory;
+
+  const totalSalesAmount = apiSummary?.totalSales !== undefined
+    ? apiSummary.totalSales
+    : salesHistory.reduce((sum, s) => sum + (s.total || s.totalBill || 0), 0);
+
+  const totalSalesCount = apiSummary?.totalBills !== undefined
+    ? apiSummary.totalBills
+    : salesHistory.length;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">

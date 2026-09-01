@@ -8,20 +8,23 @@ const ReceiptBill = ({ invoice, onNewSale, onClose }) => {
 
   if (!invoice) return null;
 
-  const {
-    invoiceNo = 'INV-10245',
-    date = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-    time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-    total = 0,
-    subtotal = 0,
-    discount = 0,
-    paymentMode = 'UPI',
-    storeName = 'GoGrocery',
-    address = 'Plot 21, Market Road, Bhubaneswar',
-    phone = '7846807407',
-    gstin = '21ABCDE1234F1Z5',
-    items = [],
-  } = invoice;
+  // Handle both flat invoice objects and nested API responses ({ store, invoice })
+  const storeData = invoice.store || {};
+  const invData = invoice.invoice || invoice;
+
+  const storeName = storeData.storeName || invoice.storeName || 'RUDRA STORE';
+  const address = storeData.address || invoice.address || 'Plot 21, Market Road, Bhubaneswar';
+  const phone = storeData.phone || invoice.phone || '7846807407';
+  const gstin = storeData.gstin || invoice.gstin || '21ABCDE1234F1Z1';
+
+  const invoiceNo = invData.invoiceNo || invoice.invoiceNo || 'INV-10245';
+  const date = invData.date || invoice.date || '';
+  const time = invData.time || invoice.time || '';
+  const paymentMode = invData.paymentMethod || invData.paymentMode || invoice.paymentMode || 'CARD';
+  const subtotal = invData.subtotal !== undefined ? invData.subtotal : (invoice.subtotal || 0);
+  const discount = invData.discount !== undefined ? invData.discount : (invoice.discount || 0);
+  const total = invData.totalBill !== undefined ? invData.totalBill : (invData.total !== undefined ? invData.total : (invoice.total || 0));
+  const rawItems = invData.items || invoice.items || [];
 
   const handlePrint = () => {
     window.print();
@@ -76,14 +79,21 @@ const ReceiptBill = ({ invoice, onNewSale, onClose }) => {
           </div>
 
           <div className="divide-y divide-slate-100 space-y-1.5 pt-1">
-            {items.map((item, idx) => (
-              <div key={idx} className="grid grid-cols-12 text-[11px] font-bold text-slate-800 pt-1">
-                <span className="col-span-6 truncate text-slate-900">{item.name}</span>
-                <span className="col-span-2 text-center">{item.qty}</span>
-                <span className="col-span-2 text-right">₹{item.price}</span>
-                <span className="col-span-2 text-right text-emerald-700">₹{item.price * item.qty}</span>
-              </div>
-            ))}
+            {rawItems.map((item, idx) => {
+              const itemName = item.name || item.productName || 'Item';
+              const itemQty = item.qty || item.quantity || 1;
+              const itemRate = item.rate !== undefined ? item.rate : (item.price !== undefined ? item.price : (item.unitPrice || 0));
+              const itemAmount = item.amount !== undefined ? item.amount : (itemRate * itemQty);
+
+              return (
+                <div key={idx} className="grid grid-cols-12 text-[11px] font-bold text-slate-800 pt-1">
+                  <span className="col-span-6 truncate text-slate-900">{itemName}</span>
+                  <span className="col-span-2 text-center">{itemQty}</span>
+                  <span className="col-span-2 text-right">₹{itemRate}</span>
+                  <span className="col-span-2 text-right text-emerald-700">₹{itemAmount}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
