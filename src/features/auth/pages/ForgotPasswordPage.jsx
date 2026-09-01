@@ -484,9 +484,9 @@ const ForgotPasswordPage = () => {
           {/* Bottom Login Link */}
           <div className="text-center pt-2 border-t border-slate-100">
             <p className="text-xs font-bold text-slate-500">
-              Remembered your PIN?{' '}
+              {t('rememberedPin') || 'Remembered your PIN?'}{' '}
               <Link to="/login" className="text-emerald-600 font-extrabold hover:underline">
-                {t('loginHere')}
+                {t('loginHere') || 'Log in here'}
               </Link>
             </p>
           </div>
