@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Store, Save, Lock, QrCode, Copy, Check, CheckCircle2, ShieldCheck, Phone, Loader2 } from 'lucide-react';
+import { Store, Save, Lock, QrCode, Copy, Check, CheckCircle2, ShieldCheck, Phone, Loader2, LocateFixed } from 'lucide-react';
 import { toast } from 'sonner';
+import useGeolocation from '../../../hooks/useGeolocation';
 
 const StoreDetailsForm = ({
   storeName,
@@ -23,6 +24,7 @@ const StoreDetailsForm = ({
 }) => {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const { getCurrentAddress, loading: geoLoading } = useGeolocation();
 
   const handleCopyShopCode = () => {
     if (navigator.clipboard && shopCode) {
@@ -183,9 +185,24 @@ const StoreDetailsForm = ({
 
       {/* Address (Editable / Optional up to 500 chars) */}
       <div className="space-y-1.5">
-        <label className="block text-xs font-extrabold uppercase text-slate-600">
-          {t('address')}
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="block text-xs font-extrabold uppercase text-slate-600">
+            {t('address')}
+          </label>
+          <button
+            type="button"
+            disabled={loading || geoLoading}
+            onClick={() => getCurrentAddress((detectedAddr) => setAddress(detectedAddr))}
+            className="text-xs font-extrabold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+          >
+            {geoLoading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <LocateFixed className="w-3.5 h-3.5" />
+            )}
+            <span>{geoLoading ? 'Detecting...' : 'Detect Current Location'}</span>
+          </button>
+        </div>
         <textarea
           rows={2}
           disabled={loading}

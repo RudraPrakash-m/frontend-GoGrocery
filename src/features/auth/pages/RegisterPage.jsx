@@ -20,7 +20,9 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  LocateFixed,
 } from 'lucide-react';
+import useGeolocation from '../../../hooks/useGeolocation';
 import { updateStoreDetails } from '../../settings/store/settingsSlice';
 import LanguageToggle from '../../../components/common/LanguageToggle';
 import LoginBanner from '../components/LoginBanner';
@@ -32,6 +34,8 @@ const RegisterPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  const { getCurrentAddress, loading: geoLoading } = useGeolocation();
 
   const [step, setStep] = useState(1); // 1: details, 2: otp, 3: success
   const [loading, setLoading] = useState(false);
@@ -347,9 +351,24 @@ const RegisterPage = () => {
 
               {/* Store Address */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-extrabold uppercase text-slate-700">
-                  {t('address') || 'Store Address'}
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-extrabold uppercase text-slate-700">
+                    {t('address') || 'Store Address'}
+                  </label>
+                  <button
+                    type="button"
+                    disabled={loading || geoLoading}
+                    onClick={() => getCurrentAddress((detectedAddr) => setAddress(detectedAddr))}
+                    className="text-xs font-extrabold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+                  >
+                    {geoLoading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <LocateFixed className="w-3.5 h-3.5" />
+                    )}
+                    <span>{geoLoading ? 'Detecting...' : 'Detect Current Location'}</span>
+                  </button>
+                </div>
                 <div className="relative">
                   <MapPin className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400" />
                   <input
