@@ -214,21 +214,13 @@ const ProductsPage = () => {
                   </div>
 
                   <div className="flex flex-col items-end gap-2 shrink-0">
-                    <span
-                      className={`font-extrabold text-xs px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5 ${
-                        isOut
-                          ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                          : isLow
-                          ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                          : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                      }`}
-                    >
+                    <span className="font-extrabold text-xs text-slate-900 inline-flex items-center gap-1.5">
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${
+                        className={`w-2 h-2 rounded-full shrink-0 ${
                           isOut ? 'bg-rose-500' : isLow ? 'bg-amber-500' : 'bg-emerald-500'
                         }`}
                       />
-                      {p.stock} {p.unit || 'Pcs'}
+                      <span>{p.stock} {p.unit || 'Pcs'}</span>
                     </span>
 
                     <div className="flex items-center gap-1">
@@ -330,21 +322,13 @@ const ProductsPage = () => {
                         )}
                       </td>
                       <td className="py-3.5 px-4">
-                        <span
-                          className={`font-extrabold text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 ${
-                            isOut
-                              ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                              : isLow
-                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                              : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                          }`}
-                        >
+                        <span className="font-extrabold text-xs text-slate-900 inline-flex items-center gap-1.5">
                           <span
-                            className={`w-1.5 h-1.5 rounded-full ${
+                            className={`w-2 h-2 rounded-full shrink-0 ${
                               isOut ? 'bg-rose-500' : isLow ? 'bg-amber-500' : 'bg-emerald-500'
                             }`}
                           />
-                          {p.stock} {p.unit || 'Pcs'}
+                          <span>{p.stock} {p.unit || 'Pcs'}</span>
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-right">
