@@ -73,31 +73,43 @@ const SalesPage = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs self-start sm:self-auto min-w-[170px]">
-          <div className="text-right flex-1">
-            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-              {t('totalSalesLabel')}
-            </p>
-            {isLoading ? (
-              <div className="py-0.5 flex justify-end">
-                <Loader2 className="w-5 h-5 text-emerald-600 animate-spin" />
-              </div>
-            ) : (
-              <p className="text-xl font-black text-emerald-600">₹{totalSalesAmount.toLocaleString()}</p>
-            )}
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center">
+          {/* Card 1: Total Revenue */}
+          <div className="bg-white p-3.5 sm:px-5 sm:py-3 rounded-2xl border border-slate-200 shadow-2xs flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <Banknote className="w-5 h-5 stroke-[2.2]" />
+            </div>
+            <div>
+              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                {t('totalSalesLabel') || 'Total Sales'}
+              </p>
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 text-emerald-600 animate-spin mt-1" />
+              ) : (
+                <p className="text-lg sm:text-xl font-black text-slate-900 leading-tight">
+                  ₹{totalSalesAmount.toLocaleString()}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="h-8 w-px bg-slate-200" />
-          <div className="flex-1">
-            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-              {t('billsLabel')}
-            </p>
-            {isLoading ? (
-              <div className="py-0.5 flex justify-start">
-                <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
-              </div>
-            ) : (
-              <p className="text-xl font-black text-slate-900">{totalSalesCount}</p>
-            )}
+
+          {/* Card 2: Total Bills */}
+          <div className="bg-white p-3.5 sm:px-5 sm:py-3 rounded-2xl border border-slate-200 shadow-2xs flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <Receipt className="w-5 h-5 stroke-[2.2]" />
+            </div>
+            <div>
+              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                {t('billsLabel') || 'Total Bills'}
+              </p>
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 text-slate-400 animate-spin mt-1" />
+              ) : (
+                <p className="text-lg sm:text-xl font-black text-slate-900 leading-tight">
+                  {totalSalesCount}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
