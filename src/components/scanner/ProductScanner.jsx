@@ -29,6 +29,11 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose, ba
   const [foundProduct, setFoundProduct] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Quantity Prompt state after scan
+  const [promptProduct, setPromptProduct] = useState(null);
+  const [promptQty, setPromptQty] = useState('');
+  const qtyInputRef = React.useRef(null);
+
   const mediaSupported = hasMediaDevicesSupport();
   const isMobile = isMobileOrTablet();
 
@@ -39,8 +44,28 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose, ba
     }
   }, [mediaSupported]);
 
+  // Auto-focus quantity input when prompt opens
+  useEffect(() => {
+    if (promptProduct && qtyInputRef.current) {
+      setTimeout(() => qtyInputRef.current?.focus(), 80);
+    }
+  }, [promptProduct]);
+
+  // Confirm Add Quantity Handler (Default = 1 if empty)
+  const handleConfirmAddQty = () => {
+    if (!promptProduct) return;
+    const finalQty = Math.max(1, parseInt(promptQty, 10) || 1);
+    if (onProductFound) {
+      onProductFound(promptProduct, finalQty);
+    }
+    setPromptProduct(null);
+    setPromptQty('');
+  };
+
   // Handle Scan Event from Camera or Manual input
   const handleScanEvent = async (result) => {
+    // If prompt is already open, lock scanner and ignore scan
+    if (promptProduct) return;
     if (onScan) onScan(result);
 
     const barcodeValue = String(result?.value || '').trim();
@@ -48,8 +73,8 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose, ba
     // 1. Instant O(1) In-Memory RAM Map Lookup (0ms latency, zero API calls)
     if (barcodeMap && barcodeMap.has(barcodeValue)) {
       const product = barcodeMap.get(barcodeValue);
-      if (onProductFound) onProductFound(product, result);
-      // Keep scanner running continuously for rapid multi-item scanning!
+      setPromptProduct(product);
+      setPromptQty('');
       return;
     }
 
@@ -61,8 +86,9 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose, ba
       const product = await productService.getProductByBarcode(barcodeValue);
       setIsSearching(false);
       if (product) {
-        setFoundProduct(product);
-        if (onProductFound) onProductFound(product, result);
+        setPromptProduct(product);
+        setPromptQty('');
+        setScanResult(null);
       } else {
         setFoundProduct(null);
         if (onProductNotFound) onProductNotFound(result);
@@ -77,6 +103,8 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose, ba
   const handleScanAgain = () => {
     setScanResult(null);
     setFoundProduct(null);
+    setPromptProduct(null);
+    setPromptQty('');
   };
 
   return (
@@ -147,12 +175,78 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose, ba
         </div>
       )}
 
-      {/* SCANNING BODY */}
-      {!scanResult ? (
+      {/* SCANNING BODY OR QUANTITY PROMPT */}
+      {promptProduct ? (
+        <div className="p-5 rounded-3xl bg-emerald-50/90 border-2 border-emerald-300 space-y-4 shadow-md animate-fadeIn">
+          <div className="flex items-center justify-between border-b border-emerald-200/80 pb-2">
+            <span className="text-xs font-extrabold uppercase text-emerald-800 tracking-wider flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              {isOdia ? 'ଉତ୍ପାଦ ସ୍କାନ୍ ହେଲା' : 'Scanned Product'}
+            </span>
+            <span className="text-xs font-black text-emerald-900 bg-emerald-200/70 px-2.5 py-1 rounded-lg">
+              {promptProduct.category || 'Grocery'}
+            </span>
+          </div>
+
+          <div>
+            <h4 className="text-xl font-black text-slate-900">{promptProduct.name}</h4>
+            <p className="text-xs text-slate-600 font-bold mt-1">
+              ₹{promptProduct.sellingPrice} · {t('stock') || 'Stock'}:{' '}
+              <strong className="text-emerald-800">{promptProduct.stock ?? '∞'} {promptProduct.unit || 'Pcs'}</strong>
+            </p>
+          </div>
+
+          {/* Quantity Input Box */}
+          <div className="space-y-1.5 pt-1">
+            <label className="block text-xs font-extrabold text-slate-700">
+              {isOdia ? 'ପରିମାଣ (Default 1):' : 'Quantity (Default 1 if left empty):'}
+            </label>
+            <input
+              ref={qtyInputRef}
+              type="number"
+              min="1"
+              max={promptProduct.stock || 9999}
+              placeholder="1"
+              value={promptQty}
+              onChange={(e) => setPromptQty(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleConfirmAddQty();
+                }
+              }}
+              className="w-full py-3 px-4 bg-white border-2 border-emerald-400 rounded-2xl text-center text-lg font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-inner"
+            />
+          </div>
+
+          {/* Action Buttons: Cancel vs Add */}
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setPromptProduct(null);
+                setPromptQty('');
+              }}
+              className="flex-1 py-3 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-xs rounded-2xl transition-colors cursor-pointer"
+            >
+              {isOdia ? 'ବାତିଲ୍' : 'Cancel'}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleConfirmAddQty}
+              className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>{isOdia ? 'ଯୋଡନ୍ତୁ (Add)' : 'Add to Sale'}</span>
+            </button>
+          </div>
+        </div>
+      ) : !scanResult ? (
         <div className="space-y-4">
           {mode === 'camera' && mediaSupported ? (
             <CameraScanner
-              active={mode === 'camera'}
+              active={mode === 'camera' && !promptProduct}
               onScanSuccess={handleScanEvent}
             />
           ) : (

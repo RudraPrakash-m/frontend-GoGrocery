@@ -33,6 +33,8 @@ const CameraScanner = ({ onScanSuccess, onError, active = true }) => {
 
   const stopCamera = () => {
     setIsScanning(false);
+    lastScannedRef.current = { value: '', time: 0 };
+
     if (controlsRef.current) {
       try {
         controlsRef.current.stop();
@@ -41,19 +43,30 @@ const CameraScanner = ({ onScanSuccess, onError, active = true }) => {
       }
       controlsRef.current = null;
     }
+
     if (codeReaderRef.current) {
       try {
         codeReaderRef.current.reset();
       } catch (e) {
         console.warn('Error resetting code reader:', e);
       }
+      codeReaderRef.current = null;
     }
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject;
-      if (stream.getTracks) {
-        stream.getTracks().forEach((track) => track.stop());
+
+    if (videoRef.current) {
+      if (videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject;
+        if (stream && stream.getTracks) {
+          stream.getTracks().forEach((track) => {
+            try {
+              track.stop();
+            } catch (err) {
+              console.warn('Error stopping track:', err);
+            }
+          });
+        }
+        videoRef.current.srcObject = null;
       }
-      videoRef.current.srcObject = null;
     }
   };
 

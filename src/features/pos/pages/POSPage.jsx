@@ -492,8 +492,8 @@ const POSPage = () => {
                 <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg cursor-default">
                   <ProductScanner
                     barcodeMap={barcodeMap}
-                    onProductFound={(prod) => {
-                      handleProductFoundFromScanner(prod, 1);
+                    onProductFound={(prod, qty) => {
+                      handleProductFoundFromScanner(prod, qty);
                     }}
                     onClose={() => setActiveTab('menu')}
                   />
