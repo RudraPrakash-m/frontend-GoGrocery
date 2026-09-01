@@ -35,9 +35,24 @@ const ProtectedLayout = () => {
   const dispatch = useDispatch();
   const { isAuthenticated, authCheckComplete } = useSelector((state) => state.auth || {});
   const [checkingAuth, setCheckingAuth] = useState(!authCheckComplete);
+  const [loaderSubtext, setLoaderSubtext] = useState('');
 
   useEffect(() => {
     let isMounted = true;
+    let timer1, timer2;
+
+    if (!authCheckComplete) {
+      timer1 = setTimeout(() => {
+        if (isMounted) setLoaderSubtext('Connecting to server...');
+      }, 3000);
+
+      timer2 = setTimeout(() => {
+        if (isMounted)
+          setLoaderSubtext(
+            'Waking up cloud server (Render free tier backends may take 15-30s on cold start)...'
+          );
+      }, 8000);
+    }
 
     const checkSession = async () => {
       try {
@@ -67,11 +82,13 @@ const ProtectedLayout = () => {
 
     return () => {
       isMounted = false;
+      clearTimeout(timer1);
+      clearTimeout(timer2);
     };
   }, [authCheckComplete, dispatch]);
 
   if (checkingAuth) {
-    return <Loader text="Verifying session..." />;
+    return <Loader text="Verifying session..." subtext={loaderSubtext} />;
   }
 
   if (!isAuthenticated) {

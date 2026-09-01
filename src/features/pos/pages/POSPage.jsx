@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   Minus,
   Plus,
+  Loader2,
 } from 'lucide-react';
 import { addSale } from '../../sales/store/salesSlice';
 import {
@@ -64,7 +65,7 @@ const POSPage = () => {
   const debouncedSearch = useDebounce(search, 250);
 
   // TanStack React Query for live product catalog
-  const { data: rawCatalog = [] } = useProducts();
+  const { data: rawCatalog = [], isLoading: isCatalogLoading } = useProducts();
   const catalog = Array.isArray(rawCatalog) ? rawCatalog : [];
 
   const filteredProducts = catalog.filter((product) => {
@@ -335,7 +336,12 @@ const POSPage = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
-                {filteredProducts.length === 0 ? (
+                {isCatalogLoading ? (
+                  <div className="col-span-2 py-8 text-center text-xs font-bold text-slate-500 flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="w-6 h-6 text-emerald-600 animate-spin" />
+                    <span>{isOdia ? 'ଉତ୍ପାଦ ତାଲିକା ଲୋଡ୍ ହେଉଛି...' : 'Loading product catalog...'}</span>
+                  </div>
+                ) : filteredProducts.length === 0 ? (
                   <div className="col-span-2 py-6 text-center text-xs font-bold text-slate-400">
                     {t('noProductsFound') || 'No matching products found'}
                   </div>

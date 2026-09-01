@@ -6,14 +6,27 @@ import StatCard from '../components/StatCard';
 import QuickActions from '../components/QuickActions';
 import LowStockList from '../components/LowStockList';
 import LanguageToggle from '../../../components/common/LanguageToggle';
+import { useProducts } from '../../products/hooks/useProductsQuery';
+import { Loader2 } from 'lucide-react';
 
 const DashboardPage = () => {
   const { t } = useTranslation();
   const authUser = useSelector((state) => state.auth?.user || {});
   const settings = useSelector((state) => state.settings || {});
   const storeName = authUser?.storeName || settings?.storeName || 'GoGrocery';
+
+  const { data: rawProducts = [], isLoading } = useProducts();
+  const products = Array.isArray(rawProducts) ? rawProducts : [];
+
   const stats = dashboardService.getStats();
-  const lowStockItems = dashboardService.getLowStockItems();
+  const totalProductsCount = products.length > 0 ? products.length : stats.totalProducts;
+  const lowStockCount = products.length > 0
+    ? products.filter((p) => p.stock <= (p.minStock || 5) && p.stock > 0).length
+    : stats.lowStockCount;
+
+  const lowStockItems = products.length > 0
+    ? products.filter((p) => p.stock <= (p.minStock || 5))
+    : dashboardService.getLowStockItems();
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 md:space-y-8">
@@ -48,12 +61,12 @@ const DashboardPage = () => {
         />
         <StatCard
           label={t('products')}
-          value={stats.totalProducts}
+          value={isLoading ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : totalProductsCount}
           textColor="text-slate-900"
         />
         <StatCard
           label={t('lowStock')}
-          value={stats.lowStockCount}
+          value={isLoading ? <Loader2 className="w-5 h-5 animate-spin text-amber-500" /> : lowStockCount}
           textColor="text-amber-500"
         />
       </div>
@@ -62,7 +75,7 @@ const DashboardPage = () => {
       <QuickActions />
 
       {/* Low Stock List Component */}
-      <LowStockList items={lowStockItems} />
+      <LowStockList items={lowStockItems} isLoading={isLoading} />
     </div>
   );
 };

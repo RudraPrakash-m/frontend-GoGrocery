@@ -25,6 +25,7 @@ import { authService } from '../../auth/services/authService';
 import { validateStoreDetailsUpdate } from '../../auth/validation/authValidation';
 import { updateStoreDetails } from '../store/settingsSlice';
 import StoreDetailsForm from '../components/StoreDetailsForm';
+import Loader from '../../../components/common/Loader';
 
 const SettingsPage = () => {
   const { t } = useTranslation();
@@ -55,6 +56,7 @@ const SettingsPage = () => {
   }, [authUser]);
 
   const [savingStore, setSavingStore] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [storeErrors, setStoreErrors] = useState({});
 
   const [printerConnected, setPrinterConnected] = useState(true);
@@ -162,12 +164,14 @@ const SettingsPage = () => {
   };
 
   const handleLogout = async () => {
+    setLoggingOut(true);
     try {
       // Call POST /api/auth/logout to clear token HTTP-Only cookie on backend
       await authService.logout();
     } catch (err) {
       // Ignore API errors during logout
     } finally {
+      setLoggingOut(false);
       dispatch(logout());
       toast.success(t('loggedOutSuccess') || 'Logged out successfully!');
       navigate('/login');
@@ -523,6 +527,12 @@ const SettingsPage = () => {
           </div>,
           document.body
         )}
+      {/* Fullscreen Loader Overlay during store update or logout */}
+      <Loader
+        isOpen={savingStore || loggingOut}
+        text={savingStore ? 'Updating Store Details...' : 'Logging out...'}
+        subtext={savingStore ? 'Saving changes to your merchant account...' : 'Clearing session...'}
+      />
     </div>
   );
 };
