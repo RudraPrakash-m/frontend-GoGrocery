@@ -227,6 +227,12 @@ export const translations = {
     quickAdd: 'Quick Add:',
     addStockQuantityBtn: 'Add +{{qty}} Stock',
     updatingStock: 'Updating...',
+    // Location & Banner Translations
+    detectLocation: 'Detect Current Location',
+    detectingLocation: 'Detecting...',
+    enterPinPasswordPlaceholder: 'Enter PIN / Password',
+    posBannerTitle: 'Simple, Fast POS for every shopkeeper',
+    posBannerSubtitle: 'Add stock, scan and sell — all from your phone. Built for Indian kirana shops.',
   },
   or: {
     appName: 'ଗୋ ଗ୍ରୋସେରୀ',
@@ -459,5 +465,11 @@ export const translations = {
     quickAdd: 'ଶୀଘ୍ର ଯୋଡନ୍ତୁ:',
     addStockQuantityBtn: '+{{qty}} ଷ୍ଟକ୍ ଯୋଡନ୍ତୁ',
     updatingStock: 'ଅଦ୍ୟତନ ହେଉଛି...',
+    // Location & Banner Translations
+    detectLocation: 'ବର୍ତ୍ତମାନର ସ୍ଥାନ ଚିହ୍ନଟ କରନ୍ତୁ',
+    detectingLocation: 'ସ୍ଥାନ ଖୋଜାହେଉଛି...',
+    enterPinPasswordPlaceholder: 'ପିନ୍ / ପାସୱାର୍ଡ ଦିଅନ୍ତୁ',
+    posBannerTitle: 'ପ୍ରତ୍ୟେକ ଦୋକାନୀଙ୍କ ପାଇଁ ସହଜ ଏବଂ ଦ୍ରୁତ POS',
+    posBannerSubtitle: 'ଷ୍ଟକ୍ ଯୋଡନ୍ତୁ, ସ୍କାନ୍ କରନ୍ତୁ ଏବଂ ବିକ୍ରି କରନ୍ତୁ — ସବୁ ଆପଣଙ୍କ ଫୋନରୁ।',
   },
 };

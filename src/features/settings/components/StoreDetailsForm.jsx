@@ -200,7 +200,11 @@ const StoreDetailsForm = ({
             ) : (
               <LocateFixed className="w-3.5 h-3.5" />
             )}
-            <span>{geoLoading ? 'Detecting...' : 'Detect Current Location'}</span>
+            <span>
+              {geoLoading
+                ? t('detectingLocation') || 'Detecting...'
+                : t('detectLocation') || 'Detect Current Location'}
+            </span>
           </button>
         </div>
         <textarea

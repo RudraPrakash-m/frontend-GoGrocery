@@ -97,7 +97,7 @@ const LoginForm = ({
                 ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
                 : 'border-slate-200/90 focus:ring-emerald-500'
             }`}
-            placeholder="Enter PIN / Password"
+            placeholder={t('enterPinPasswordPlaceholder') || 'Enter PIN / Password'}
           />
           {/* Show / Hide Password Icon Button */}
           <button
