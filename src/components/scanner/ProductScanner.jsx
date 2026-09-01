@@ -104,7 +104,10 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose, ba
         {onClose && (
           <button
             type="button"
-            onClick={onClose}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
             className="w-9 h-9 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />

@@ -100,8 +100,13 @@ const POSPage = () => {
     );
   });
 
-  const handleProductFoundFromScanner = (product) => {
+  const [customQtys, setCustomQtys] = useState({});
+
+  const handleProductFoundFromScanner = (product, requestedQty = 1) => {
     if (!product) return;
+
+    // Parse requested quantity: default to 1 if empty/unspecified/invalid
+    const qtyToAdd = Math.max(1, parseInt(requestedQty, 10) || 1);
 
     const existingCartItem = cart.find(
       (item) =>
@@ -118,11 +123,11 @@ const POSPage = () => {
         ? Number(existingCartItem.stock)
         : Infinity;
 
-    if (currentQtyInCart + 1 > maxStock) {
+    if (currentQtyInCart + qtyToAdd > maxStock) {
       if (isOdia) {
-        toast.error(`"${product.name}" ପାଇଁ ପର୍ଯ୍ୟାପ୍ତ ଷ୍ଟକ୍ ନାହିଁ! (ସର୍ବାଧିକ: ${maxStock})`);
+        toast.error(`"${product.name}" ପାଇଁ ପର୍ଯ୍ୟାପ୍ତ ଷ୍ଟକ୍ ନାହିଁ! (ସର୍ବାଧିକ: ${maxStock}, କାର୍ଟରେ ଅଛି: ${currentQtyInCart})`);
       } else {
-        toast.error(`Cannot add more "${product.name}". Available stock limit (${maxStock}) reached!`);
+        toast.error(`Cannot add ${qtyToAdd}x "${product.name}". Stock limit (${maxStock}) reached!`);
       }
       return;
     }
@@ -133,17 +138,23 @@ const POSPage = () => {
         name: product.name,
         sellingPrice: product.sellingPrice,
         price: product.sellingPrice,
-        qty: 1,
+        qty: qtyToAdd,
         stock: maxStock,
         barcode: product.barcode,
         unit: product.unit || 'Pcs',
       })
     );
 
+    // Reset custom qty input for this product
+    const prodKey = product.id || product._id;
+    if (prodKey) {
+      setCustomQtys((prev) => ({ ...prev, [prodKey]: '' }));
+    }
+
     if (isOdia) {
-      toast.success(`✓ "${product.name}" କାର୍ଟରେ ଯୋଡାଗଲା!`, { duration: 1200 });
+      toast.success(`✓ "${product.name}" (${qtyToAdd} ${product.unit || 'Pcs'}) କାର୍ଟରେ ଯୋଡାଗଲା!`, { duration: 1200 });
     } else {
-      toast.success(`✓ ${product.name} ${t('addedToCartSuccess') || 'added to cart'}`, { duration: 1200 });
+      toast.success(`✓ ${product.name} (${qtyToAdd} ${product.unit || 'Pcs'}) ${t('addedToCartSuccess') || 'added to cart'}`, { duration: 1200 });
     }
   };
 
@@ -169,10 +180,6 @@ const POSPage = () => {
 
   const handleRemoveFromCart = (id) => {
     dispatch(removeFromCart(id));
-  };
-
-  const addToCartFromSearch = (product) => {
-    handleProductFoundFromScanner(product);
   };
 
   // Calculation helpers
@@ -417,30 +424,59 @@ const POSPage = () => {
                     {t('noProductsFound') || 'No matching products found'}
                   </div>
                 ) : (
-                  filteredProducts.map((product) => (
-                    <button
-                      key={product.id || product._id}
-                      type="button"
-                      onClick={() => addToCartFromSearch(product)}
-                      className="p-3.5 rounded-2xl border border-slate-200/90 bg-white hover:bg-slate-50 flex items-center justify-between text-left transition-all active:scale-[0.98] cursor-pointer group"
-                    >
-                      <div className="min-w-0 pr-2">
-                        <p className="font-extrabold text-slate-900 text-sm truncate">
-                          {product.name}
-                        </p>
-                        <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                          ₹{product.sellingPrice} ·{' '}
-                          <span className="text-slate-400 font-normal">
-                            {t('stock') || 'Stock'}: {product.stock} {product.unit || 'Pcs'}
-                          </span>
-                        </p>
-                      </div>
+                  filteredProducts.map((product) => {
+                    const prodKey = product.id || product._id;
+                    const currentVal = customQtys[prodKey] || '';
+                    return (
+                      <div
+                        key={prodKey}
+                        className="p-3.5 rounded-2xl border border-slate-200/90 bg-white hover:border-emerald-300 flex items-center justify-between gap-2 text-left transition-all shadow-2xs"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-extrabold text-slate-900 text-sm truncate">
+                            {product.name}
+                          </p>
+                          <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                            ₹{product.sellingPrice} ·{' '}
+                            <span className="text-slate-400 font-normal">
+                              {t('stock') || 'Stock'}: {product.stock} {product.unit || 'Pcs'}
+                            </span>
+                          </p>
+                        </div>
 
-                      <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                        <Plus className="w-4 h-4 stroke-[2.5]" />
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <input
+                            type="number"
+                            min="1"
+                            max={product.stock || 9999}
+                            placeholder="1"
+                            value={currentVal}
+                            onChange={(e) =>
+                              setCustomQtys({
+                                ...customQtys,
+                                [prodKey]: e.target.value,
+                              })
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleProductFoundFromScanner(product, currentVal);
+                              }
+                            }}
+                            className="w-14 py-1.5 px-2 bg-slate-50 border border-slate-200 rounded-xl text-center text-xs font-black text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleProductFoundFromScanner(product, currentVal)}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-black shadow-2xs flex items-center gap-1 transition-all cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                            <span>{isOdia ? 'ଯୋଡନ୍ତୁ' : 'Add'}</span>
+                          </button>
+                        </div>
                       </div>
-                    </button>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -449,14 +485,19 @@ const POSPage = () => {
           {/* REUSABLE PRODUCT SCANNER PORTAL */}
           {activeTab === 'scan' &&
             createPortal(
-              <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[99999] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-                <ProductScanner
-                  barcodeMap={barcodeMap}
-                  onProductFound={(prod) => {
-                    handleProductFoundFromScanner(prod);
-                  }}
-                  onClose={() => setActiveTab('menu')}
-                />
+              <div
+                onClick={() => setActiveTab('menu')}
+                className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[99999] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer"
+              >
+                <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg cursor-default">
+                  <ProductScanner
+                    barcodeMap={barcodeMap}
+                    onProductFound={(prod) => {
+                      handleProductFoundFromScanner(prod, 1);
+                    }}
+                    onClose={() => setActiveTab('menu')}
+                  />
+                </div>
               </div>,
               document.body
             )}
