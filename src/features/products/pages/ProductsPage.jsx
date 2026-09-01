@@ -6,6 +6,7 @@ import { Plus, Package, Edit, Trash2, Loader2, RefreshCw } from 'lucide-react';
 import ProductSearchBar from '../components/ProductSearchBar';
 import EditProductModal from '../components/EditProductModal';
 import ConfirmModal from '../../../components/common/ConfirmModal';
+import TableSkeleton from '../../../components/common/TableSkeleton';
 import { useProducts, useUpdateProduct, useDeleteProduct } from '../hooks/useProductsQuery';
 import useDebounce from '../../../hooks/useDebounce';
 import useDocumentTitle from '../../../hooks/useDocumentTitle';
@@ -189,16 +190,7 @@ const ProductsPage = () => {
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
               {isLoading ? (
-                <tr>
-                  <td colSpan={5} className="py-16 text-center text-slate-400">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
-                      <p className="text-xs font-bold text-slate-600">
-                        {isOdia ? 'ଉତ୍ପାଦ ତାଲିକା ଲୋଡ୍ ହେଉଛି...' : 'Loading product catalog...'}
-                      </p>
-                    </div>
-                  </td>
-                </tr>
+                <TableSkeleton rows={5} cols={5} />
               ) : filteredProducts.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-16 text-center text-slate-400">

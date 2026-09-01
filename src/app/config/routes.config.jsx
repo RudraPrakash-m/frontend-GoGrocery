@@ -7,6 +7,7 @@ import Loader from '../../components/common/Loader';
 import { authService } from '../../features/auth/services/authService';
 import { setUserProfile, logout } from '../../features/auth/authSlice';
 import { updateStoreDetails } from '../../features/settings/store/settingsSlice';
+import { preloadAllRoutes } from '../utils/routePreloader';
 
 // Lazy Loaded Route Chunks for Fast Initial Page Load
 const LoginPage = lazy(() => import('../../features/auth/pages/LoginPage'));
@@ -62,6 +63,7 @@ const ProtectedLayout = () => {
           const userObj = res?.user || res?.data?.user || res?.data || res;
           dispatch(setUserProfile(userObj));
           dispatch(updateStoreDetails(userObj));
+          preloadAllRoutes();
         }
       } catch (err) {
         if (isMounted) {
@@ -78,6 +80,7 @@ const ProtectedLayout = () => {
       checkSession();
     } else {
       setCheckingAuth(false);
+      preloadAllRoutes();
     }
 
     return () => {
