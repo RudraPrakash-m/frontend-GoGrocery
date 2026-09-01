@@ -6,8 +6,8 @@ import StatCard from '../components/StatCard';
 import QuickActions from '../components/QuickActions';
 import LowStockList from '../components/LowStockList';
 import LanguageToggle from '../../../components/common/LanguageToggle';
+import CardSkeleton from '../../../components/common/CardSkeleton';
 import { useProducts } from '../../products/hooks/useProductsQuery';
-import { Loader2 } from 'lucide-react';
 
 const DashboardPage = () => {
   const { t } = useTranslation();
@@ -49,26 +49,32 @@ const DashboardPage = () => {
 
       {/* Top 4 Stats Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-        <StatCard
-          label={t('todaysSales')}
-          value={`₹${stats.todaysSales.toLocaleString()}`}
-          textColor="text-emerald-600"
-        />
-        <StatCard
-          label={t('todaysOrders')}
-          value={stats.todaysOrders}
-          textColor="text-slate-900"
-        />
-        <StatCard
-          label={t('products')}
-          value={isLoading ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : totalProductsCount}
-          textColor="text-slate-900"
-        />
-        <StatCard
-          label={t('lowStock')}
-          value={isLoading ? <Loader2 className="w-5 h-5 animate-spin text-amber-500" /> : lowStockCount}
-          textColor="text-amber-500"
-        />
+        {isLoading ? (
+          <CardSkeleton count={4} />
+        ) : (
+          <>
+            <StatCard
+              label={t('todaysSales')}
+              value={`₹${stats.todaysSales.toLocaleString()}`}
+              textColor="text-emerald-600"
+            />
+            <StatCard
+              label={t('todaysOrders')}
+              value={stats.todaysOrders}
+              textColor="text-slate-900"
+            />
+            <StatCard
+              label={t('products')}
+              value={totalProductsCount}
+              textColor="text-slate-900"
+            />
+            <StatCard
+              label={t('lowStock')}
+              value={lowStockCount}
+              textColor="text-amber-500"
+            />
+          </>
+        )}
       </div>
 
       {/* Quick Actions Component */}

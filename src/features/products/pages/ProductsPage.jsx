@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Plus, Package, Edit, Trash2, Loader2, RefreshCw } from 'lucide-react';
+import { Plus, Package, Edit, Trash2, RefreshCw } from 'lucide-react';
 import ProductSearchBar from '../components/ProductSearchBar';
 import EditProductModal from '../components/EditProductModal';
 import ConfirmModal from '../../../components/common/ConfirmModal';
