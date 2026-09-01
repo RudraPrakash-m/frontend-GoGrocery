@@ -43,13 +43,13 @@ const RegisterPage = () => {
   const [showConfirmPin, setShowConfirmPin] = useState(false);
 
   // Form Fields
-  const [storeName, setStoreName] = useState('GoGrocery Kirana Store');
-  const [email, setEmail] = useState('owner@gogrocery.in');
-  const [phone, setPhone] = useState('7846807407');
-  const [address, setAddress] = useState('Plot 21, Market Road, Bhubaneswar');
-  const [gstin, setGstin] = useState('21ABCDE1234F1Z5');
-  const [pin, setPin] = useState('123456');
-  const [confirmPin, setConfirmPin] = useState('123456');
+  const [storeName, setStoreName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [gstin] = useState('');
+  const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
 
   // OTP State
   const [otp, setOtp] = useState('');
@@ -91,7 +91,7 @@ const RegisterPage = () => {
         phone: phone.trim(),
         password: pin,
         address: address.trim(),
-        gstin: gstin.trim(),
+        gstin: '', // Always send as empty string during registration (user sets later in settings)
       };
 
       // Call Backend POST /auth/register with Encrypted Payload
@@ -303,7 +303,7 @@ const RegisterPage = () => {
                       setEmail(e.target.value);
                       clearFieldError('email');
                     }}
-                    placeholder="owner@gogrocery.in"
+                    placeholder="e.g. owner@gogrocery.in"
                     className={`w-full pl-11 pr-4 py-3 bg-blue-50/70 border rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
                       errors?.email
                         ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
@@ -332,7 +332,7 @@ const RegisterPage = () => {
                       setPhone(e.target.value);
                       clearFieldError('phone');
                     }}
-                    placeholder="7846807407"
+                    placeholder="e.g. 9876543210"
                     className={`w-full pl-11 pr-4 py-3 bg-blue-50/70 border rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
                       errors?.phone
                         ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'
@@ -357,7 +357,7 @@ const RegisterPage = () => {
                     disabled={loading}
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Plot 21, Market Road, Bhubaneswar"
+                    placeholder="e.g. Plot 21, Market Road, Bhubaneswar"
                     className="w-full pl-11 pr-4 py-3 bg-blue-50/70 border border-slate-200/90 rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
@@ -430,7 +430,7 @@ const RegisterPage = () => {
                         setConfirmPin(e.target.value);
                         clearFieldError('confirmPin');
                       }}
-                      placeholder="Confirm PIN"
+                      placeholder="Confirm 6-digit PIN"
                       className={`w-full pl-10 pr-10 py-3 bg-blue-50/70 border rounded-2xl text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
                         errors?.confirmPin
                           ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/50'

@@ -17,13 +17,10 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
-
-  const settings = useSelector((state) => state.settings || {});
-
   const [mobile, setMobile] = useState(
-    location.state?.shopCode || settings.shopCode || 'SHOP-8409'
+    location.state?.shopCode || ''
   );
-  const [pin, setPin] = useState('123456');
+  const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
