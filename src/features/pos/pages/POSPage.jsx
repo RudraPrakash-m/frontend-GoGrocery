@@ -153,9 +153,14 @@ const POSPage = () => {
       gstin: currentGstin,
       itemsCount: cartItemsCount,
       items: cart.map((c) => ({
+        product: String(c.id || c._id || c.productId || '').trim(),
+        productId: String(c.id || c._id || c.productId || '').trim(),
+        id: String(c.id || c._id || c.productId || '').trim(),
         name: c.name,
         qty: c.qty,
+        quantity: c.qty,
         price: c.price,
+        unitPrice: c.price,
         unit: c.unit || 'Pcs',
       })),
     };
