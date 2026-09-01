@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +17,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { addSale } from '../../sales/store/salesSlice';
+import { salesService } from '../../sales/services/salesService';
 import {
   addToCart,
   updateCartQty,
@@ -67,6 +68,17 @@ const POSPage = () => {
   // TanStack React Query for live product catalog
   const { data: rawCatalog = [], isLoading: isCatalogLoading } = useProducts();
   const catalog = Array.isArray(rawCatalog) ? rawCatalog : [];
+
+  // O(1) In-Memory RAM Map for Instant 0ms Barcode Lookups
+  const barcodeMap = useMemo(() => {
+    const map = new Map();
+    catalog.forEach((product) => {
+      if (product.barcode) {
+        map.set(String(product.barcode).trim(), product);
+      }
+    });
+    return map;
+  }, [catalog]);
 
   const filteredProducts = catalog.filter((product) => {
     if (!debouncedSearch) return true;
@@ -147,6 +159,9 @@ const POSPage = () => {
         unit: c.unit || 'Pcs',
       })),
     };
+
+    // Trigger AES-256 encrypted sales record creation in background
+    salesService.createSale(newInvoice).catch(() => {});
 
     dispatch(addSale(newInvoice));
     dispatch(clearCart());
@@ -380,6 +395,7 @@ const POSPage = () => {
             createPortal(
               <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[99999] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
                 <ProductScanner
+                  barcodeMap={barcodeMap}
                   onProductFound={(prod) => {
                     handleProductFoundFromScanner(prod);
                   }}

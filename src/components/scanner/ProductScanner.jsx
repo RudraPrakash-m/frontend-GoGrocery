@@ -19,7 +19,7 @@ import ManualScanner from './ManualScanner';
 import { hasMediaDevicesSupport, isMobileOrTablet } from './scannerUtils';
 import { productService } from '../../features/products/services/productService';
 
-const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose }) => {
+const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose, barcodeMap }) => {
   const { t, i18n } = useTranslation();
   const isOdia = i18n?.language === 'or';
   const navigate = useNavigate();
@@ -41,13 +41,24 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose }) 
 
   // Handle Scan Event from Camera or Manual input
   const handleScanEvent = async (result) => {
-    setScanResult(result);
     if (onScan) onScan(result);
 
-    // Query Product Service / API
+    const barcodeValue = String(result?.value || '').trim();
+
+    // 1. Instant O(1) In-Memory RAM Map Lookup (0ms latency, zero API calls)
+    if (barcodeMap && barcodeMap.has(barcodeValue)) {
+      const product = barcodeMap.get(barcodeValue);
+      if (onProductFound) onProductFound(product, result);
+      // Keep scanner running continuously for rapid multi-item scanning!
+      return;
+    }
+
+    setScanResult(result);
+
+    // 2. Fallback DB Lookup if item is not found in preloaded map
     setIsSearching(true);
     try {
-      const product = await productService.getProductByBarcode(result.value);
+      const product = await productService.getProductByBarcode(barcodeValue);
       setIsSearching(false);
       if (product) {
         setFoundProduct(product);
@@ -56,7 +67,7 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose }) 
         setFoundProduct(null);
         if (onProductNotFound) onProductNotFound(result);
       }
-    } catch (err) {
+    } catch (_err) {
       setIsSearching(false);
       setFoundProduct(null);
       if (onProductNotFound) onProductNotFound(result);
