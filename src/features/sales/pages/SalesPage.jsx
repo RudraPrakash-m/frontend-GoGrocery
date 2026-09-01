@@ -13,7 +13,8 @@ const getPaymentMode = (item) =>
   ).toUpperCase();
 
 const SalesPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isOdia = i18n?.language === 'or';
   const [filter, setFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
 
