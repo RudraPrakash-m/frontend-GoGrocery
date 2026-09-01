@@ -7,8 +7,9 @@ export const salesService = {
    */
   getSalesHistory: async ({ tab = 'all', search = '' } = {}) => {
     try {
+      const tabParam = String(tab || 'all').toLowerCase();
       const response = await apiClient.get('/sales', {
-        params: { tab, search },
+        params: { tab: tabParam, search },
       });
       return response.data;
     } catch (_err) {

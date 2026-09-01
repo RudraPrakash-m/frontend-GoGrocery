@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { Receipt, QrCode, Banknote, CreditCard, Eye, X, Loader2 } from 'lucide-react';
 import ReceiptBill from '../components/ReceiptBill';
 import { useSalesHistory } from '../hooks/useSalesQuery';
+
+// Helper to normalize payment mode across all API and Redux object schemas
+const getPaymentMode = (item) =>
+  String(
+    item?.paymentMethod || item?.paymentMode || item?.paymentBadge || item?.mode || ''
+  ).toUpperCase();
 
 const SalesPage = () => {
   const { t } = useTranslation();
@@ -17,15 +23,41 @@ const SalesPage = () => {
   const apiSales = salesResponse?.data;
   const apiSummary = salesResponse?.summary;
 
-  const salesHistory = Array.isArray(apiSales) && apiSales.length > 0 ? apiSales : reduxSalesHistory;
+  // Merge API sales with local Redux sales so newly sold items NEVER vanish across tabs
+  const salesHistory = useMemo(() => {
+    const list = Array.isArray(apiSales) ? [...apiSales] : [];
+    reduxSalesHistory.forEach((reduxItem) => {
+      const exists = list.some(
+        (apiItem) =>
+          (apiItem.invoiceNo && apiItem.invoiceNo === reduxItem.invoiceNo) ||
+          (apiItem.id && String(apiItem.id) === String(reduxItem.id)) ||
+          (apiItem._id && String(apiItem._id) === String(reduxItem.id))
+      );
+      if (!exists) {
+        list.unshift(reduxItem);
+      }
+    });
 
-  const totalSalesAmount = apiSummary?.totalSales !== undefined
-    ? apiSummary.totalSales
-    : salesHistory.reduce((sum, s) => sum + (s.total || s.totalBill || 0), 0);
+    if (filter === 'all') return list;
+    return list.filter((s) => getPaymentMode(s) === filter.toUpperCase());
+  }, [apiSales, reduxSalesHistory, filter]);
 
-  const totalSalesCount = apiSummary?.totalBills !== undefined
-    ? apiSummary.totalBills
-    : salesHistory.length;
+  const totalSalesAmount = useMemo(() => {
+    if (filter === 'all' && apiSummary?.totalSales !== undefined) {
+      return apiSummary.totalSales;
+    }
+    return salesHistory.reduce(
+      (sum, s) => sum + (s.total !== undefined ? s.total : (s.totalBill || s.netAmount || 0)),
+      0
+    );
+  }, [apiSummary, salesHistory, filter]);
+
+  const totalSalesCount = useMemo(() => {
+    if (filter === 'all' && apiSummary?.totalBills !== undefined) {
+      return apiSummary.totalBills;
+    }
+    return salesHistory.length;
+  }, [apiSummary, salesHistory, filter]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
@@ -105,11 +137,17 @@ const SalesPage = () => {
           </p>
         ) : (
           <div className="divide-y divide-slate-100 space-y-1">
-            {salesHistory
-              .filter((s) => filter === 'all' || s.paymentMode === filter)
-              .map((item) => (
+            {salesHistory.map((item, index) => {
+              const pMode = getPaymentMode(item);
+              const invoiceId = item.id || item._id || item.invoiceNo || index;
+              const dateStr = item.date || '';
+              const timeStr = item.time || '';
+              const dateTimeDisplay = item.formattedDateTime || `${dateStr}${timeStr ? ' · ' + timeStr : ''}`;
+              const totalAmt = item.total !== undefined ? item.total : (item.totalBill !== undefined ? item.totalBill : (item.netAmount || 0));
+
+              return (
                 <div
-                  key={item.id}
+                  key={invoiceId}
                   className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 rounded-2xl p-3 transition-colors border-b border-slate-100/70 last:border-b-0"
                 >
                   {/* Left Side: Receipt Icon + Invoice Code + Date */}
@@ -123,7 +161,7 @@ const SalesPage = () => {
                           {item.invoiceNo}
                         </p>
                         <p className="text-[11px] text-slate-400 font-semibold truncate">
-                          {item.date} · {item.time} ({item.itemsCount || (item.items ? item.items.length : 1)} {t('items')})
+                          {dateTimeDisplay} ({item.itemsCount || (item.items ? item.items.length : 1)} {t('items')})
                         </p>
                       </div>
                     </div>
@@ -131,17 +169,17 @@ const SalesPage = () => {
                     {/* Mobile Payment Mode Badge */}
                     <span
                       className={`sm:hidden text-[10px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 ${
-                        item.paymentMode === 'UPI'
+                        pMode === 'UPI'
                           ? 'bg-blue-50 text-blue-800 border border-blue-200'
-                          : item.paymentMode === 'CASH'
+                          : pMode === 'CASH'
                           ? 'bg-amber-50 text-amber-800 border border-amber-200'
                           : 'bg-purple-50 text-purple-800 border border-purple-200'
                       }`}
                     >
-                      {item.paymentMode === 'UPI' && <QrCode className="w-3 h-3 text-blue-600" />}
-                      {item.paymentMode === 'CASH' && <Banknote className="w-3 h-3 text-amber-600" />}
-                      {item.paymentMode === 'CARD' && <CreditCard className="w-3 h-3 text-purple-600" />}
-                      {item.paymentMode}
+                      {pMode === 'UPI' && <QrCode className="w-3 h-3 text-blue-600" />}
+                      {pMode === 'CASH' && <Banknote className="w-3 h-3 text-amber-600" />}
+                      {pMode === 'CARD' && <CreditCard className="w-3 h-3 text-purple-600" />}
+                      {pMode || 'CARD'}
                     </span>
                   </div>
 
@@ -150,21 +188,21 @@ const SalesPage = () => {
                     {/* Desktop Payment Mode Badge */}
                     <span
                       className={`hidden sm:flex text-[10px] font-extrabold px-2.5 py-1 rounded-full items-center gap-1 shrink-0 ${
-                        item.paymentMode === 'UPI'
+                        pMode === 'UPI'
                           ? 'bg-blue-50 text-blue-800 border border-blue-200'
-                          : item.paymentMode === 'CASH'
+                          : pMode === 'CASH'
                           ? 'bg-amber-50 text-amber-800 border border-amber-200'
                           : 'bg-purple-50 text-purple-800 border border-purple-200'
                       }`}
                     >
-                      {item.paymentMode === 'UPI' && <QrCode className="w-3 h-3 text-blue-600" />}
-                      {item.paymentMode === 'CASH' && <Banknote className="w-3 h-3 text-amber-600" />}
-                      {item.paymentMode === 'CARD' && <CreditCard className="w-3 h-3 text-purple-600" />}
-                      {item.paymentMode}
+                      {pMode === 'UPI' && <QrCode className="w-3 h-3 text-blue-600" />}
+                      {pMode === 'CASH' && <Banknote className="w-3 h-3 text-amber-600" />}
+                      {pMode === 'CARD' && <CreditCard className="w-3 h-3 text-purple-600" />}
+                      {pMode || 'CARD'}
                     </span>
 
                     <span className="font-black text-slate-900 text-lg md:text-xl shrink-0">
-                      ₹{item.total}
+                      ₹{totalAmt}
                     </span>
 
                     {/* View Bill Action Button */}
@@ -178,7 +216,8 @@ const SalesPage = () => {
                     </button>
                   </div>
                 </div>
-              ))}
+              );
+            })}
           </div>
         )}
       </div>
