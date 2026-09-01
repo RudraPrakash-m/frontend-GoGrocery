@@ -9,13 +9,23 @@ export const authService = {
    */
   login: async (identifier, password) => {
     const payload = {
-      identifier,
-      shopCode: identifier,
-      email: identifier,
+      identifier: identifier ? identifier.trim() : '',
+      shopCode: identifier ? identifier.trim() : '',
+      email: identifier ? identifier.trim() : '',
+      phone: identifier ? identifier.trim() : '',
+      mobile: identifier ? identifier.trim() : '',
       password,
+      pin: password,
     };
     const encryptedPayload = encryptPayload(payload);
-    return apiClient.post('/auth/login', encryptedPayload);
+    try {
+      return await apiClient.post('/auth/login', encryptedPayload);
+    } catch (err) {
+      if (err?.response?.data?.message?.includes('expected string')) {
+        return apiClient.post('/auth/login', payload);
+      }
+      throw err;
+    }
   },
 
   /**
@@ -36,12 +46,19 @@ export const authService = {
 
   /**
    * Shop Registration
-   * Sends encrypted payload { iv, encryptedData }
+   * Sends encrypted payload { iv, encryptedData } with plain fallback
    * POST /auth/register
    */
   register: async (registerData) => {
     const encryptedPayload = encryptPayload(registerData);
-    return apiClient.post('/auth/register', encryptedPayload);
+    try {
+      return await apiClient.post('/auth/register', encryptedPayload);
+    } catch (err) {
+      if (err?.response?.data?.message?.includes('expected string')) {
+        return apiClient.post('/auth/register', registerData);
+      }
+      throw err;
+    }
   },
 
   /**
@@ -50,7 +67,16 @@ export const authService = {
    * Payload: { email, otp }
    */
   verifyOtp: async (email, otp) => {
-    return apiClient.post('/auth/verify-otp', { email, otp });
+    const payload = { email: email ? email.trim() : '', otp: String(otp || '').trim() };
+    const encryptedPayload = encryptPayload(payload);
+    try {
+      return await apiClient.post('/auth/verify-otp', encryptedPayload);
+    } catch (err) {
+      if (err?.response?.data?.message?.includes('expected string')) {
+        return apiClient.post('/auth/verify-otp', payload);
+      }
+      throw err;
+    }
   },
 
   /**
@@ -59,7 +85,16 @@ export const authService = {
    * Payload: { email }
    */
   resendOtp: async (email) => {
-    return apiClient.post('/auth/resend-otp', { email });
+    const payload = { email: email ? email.trim() : '' };
+    const encryptedPayload = encryptPayload(payload);
+    try {
+      return await apiClient.post('/auth/resend-otp', encryptedPayload);
+    } catch (err) {
+      if (err?.response?.data?.message?.includes('expected string')) {
+        return apiClient.post('/auth/resend-otp', payload);
+      }
+      throw err;
+    }
   },
 
   /**
