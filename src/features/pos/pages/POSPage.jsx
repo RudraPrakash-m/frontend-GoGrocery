@@ -30,7 +30,8 @@ import POSActionCards from '../components/POSActionCards';
 import FloatingCartButton from '../components/FloatingCartButton';
 import ReceiptBill from '../../sales/components/ReceiptBill';
 import ProductScanner from '../../../components/scanner/ProductScanner';
-import { useProducts } from '../../products/hooks/useProductsQuery';
+import { useQueryClient } from '@tanstack/react-query';
+import { useProducts, PRODUCT_QUERY_KEYS } from '../../products/hooks/useProductsQuery';
 import usePOSShortcuts from '../hooks/usePOSShortcuts';
 import useDocumentTitle from '../../../hooks/useDocumentTitle';
 import useDebounce from '../../../hooks/useDebounce';
@@ -39,6 +40,7 @@ const POSPage = () => {
   const { t, i18n } = useTranslation();
   const isOdia = i18n?.language === 'or';
   const dispatch = useDispatch();
+  const queryClient = useQueryClient();
 
   useDocumentTitle(isOdia ? 'ବିଲିଂ ପଏଣ୍ଟ ଅଫ୍ ସେଲ୍' : 'POS Billing');
 
@@ -225,6 +227,29 @@ const POSPage = () => {
 
     // Trigger AES-256 encrypted sales record creation in background
     salesService.createSale(newInvoice).catch(() => {});
+
+    // Automatically update local product stock counts in query cache and trigger background refetch
+    try {
+      queryClient.setQueriesData({ queryKey: PRODUCT_QUERY_KEYS.all }, (oldData) => {
+        if (!Array.isArray(oldData)) return oldData;
+        return oldData.map((p) => {
+          const soldItem = cart.find(
+            (item) =>
+              item.id === p.id ||
+              item.id === p._id ||
+              (p.barcode && item.barcode === p.barcode)
+          );
+          if (soldItem) {
+            const newStock = Math.max(0, (p.stock !== undefined ? p.stock : 0) - soldItem.qty);
+            return { ...p, stock: newStock };
+          }
+          return p;
+        });
+      });
+      queryClient.invalidateQueries({ queryKey: PRODUCT_QUERY_KEYS.all });
+    } catch (_err) {
+      // Silently ignore cache update errors
+    }
 
     dispatch(addSale(newInvoice));
     dispatch(clearCart());

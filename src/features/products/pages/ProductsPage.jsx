@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Plus, Package, Edit, Trash2, RefreshCw } from 'lucide-react';
+import { Plus, Package, Edit, Trash2, RefreshCw, Loader2 } from 'lucide-react';
 import ProductSearchBar from '../components/ProductSearchBar';
 import EditProductModal from '../components/EditProductModal';
 import ConfirmModal from '../../../components/common/ConfirmModal';
@@ -170,8 +170,94 @@ const ProductsPage = () => {
           counts={counts}
         />
 
-        {/* Product Table */}
-        <div className="overflow-x-auto min-w-full">
+        {/* MOBILE RESPONSIVE CARDS VIEW (Shown on Mobile screens < 768px) */}
+        <div className="block md:hidden p-3 divide-y divide-slate-100">
+          {isLoading ? (
+            <div className="py-8 text-center text-xs font-bold text-slate-500 flex flex-col items-center justify-center gap-2">
+              <Loader2 className="w-6 h-6 text-emerald-600 animate-spin" />
+              <span>{isOdia ? 'ଉତ୍ପାଦ ତାଲିକା ଲୋଡ୍ ହେଉଛି...' : 'Loading catalog...'}</span>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 space-y-2">
+              <Package className="w-10 h-10 mx-auto stroke-1 text-slate-300" />
+              <p className="font-extrabold text-slate-700 text-xs mt-1">
+                {t('noProductsFound') || 'No Products Found'}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                {debouncedSearch
+                  ? `No matches found for "${debouncedSearch}".`
+                  : 'No items in this category yet.'}
+              </p>
+            </div>
+          ) : (
+            filteredProducts.map((p) => {
+              const prodId = p.id || p._id;
+              const isLow = p.stock <= (p.minStock || 5) && p.stock > 0;
+              const isOut = p.stock === 0;
+
+              return (
+                <div key={prodId} className="py-3.5 first:pt-0 flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-extrabold text-slate-900 text-sm truncate">{p.name}</p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap text-xs">
+                      <span className="font-black text-slate-900">₹{p.sellingPrice}</span>
+                      {p.purchasePrice !== undefined && p.purchasePrice > 0 && (
+                        <span className="text-[10px] text-slate-400 font-medium">Cost: ₹{p.purchasePrice}</span>
+                      )}
+                      <span className="bg-slate-100 text-slate-700 font-bold text-[10px] px-2 py-0.5 rounded-md border border-slate-200/60">
+                        {p.category || 'Grocery'}
+                      </span>
+                    </div>
+                    <p className="font-mono text-[10px] text-slate-400 mt-1 tracking-wider">
+                      {p.barcode || 'NO-BARCODE'}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <span
+                      className={`font-extrabold text-xs px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5 ${
+                        isOut
+                          ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                          : isLow
+                          ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                          : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          isOut ? 'bg-rose-500' : isLow ? 'bg-amber-500' : 'bg-emerald-500'
+                        }`}
+                      />
+                      {p.stock} {p.unit || 'Pcs'}
+                    </span>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setEditingProduct(p)}
+                        className="p-1.5 rounded-xl text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 active:scale-95 transition-all cursor-pointer"
+                        title={t('edit') || 'Edit Product'}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingProductId(prodId)}
+                        className="p-1.5 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition-all cursor-pointer"
+                        title={t('delete') || 'Delete Product'}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* DESKTOP PRODUCT TABLE (Shown on screens >= 768px) */}
+        <div className="hidden md:block overflow-x-auto min-w-full">
           <table className="w-full text-left text-xs sm:text-sm">
             <thead
               className={`bg-slate-50 border-b border-slate-100 uppercase tracking-wider ${
