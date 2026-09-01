@@ -102,6 +102,31 @@ const POSPage = () => {
 
   const handleProductFoundFromScanner = (product) => {
     if (!product) return;
+
+    const existingCartItem = cart.find(
+      (item) =>
+        item.id === product.id ||
+        item.id === product._id ||
+        (product.barcode && item.barcode === product.barcode)
+    );
+
+    const currentQtyInCart = existingCartItem ? existingCartItem.qty : 0;
+    const maxStock =
+      product.stock !== undefined
+        ? Number(product.stock)
+        : existingCartItem?.stock !== undefined
+        ? Number(existingCartItem.stock)
+        : Infinity;
+
+    if (currentQtyInCart + 1 > maxStock) {
+      if (isOdia) {
+        toast.error(`"${product.name}" ପାଇଁ ପର୍ଯ୍ୟାପ୍ତ ଷ୍ଟକ୍ ନାହିଁ! (ସର୍ବାଧିକ: ${maxStock})`);
+      } else {
+        toast.error(`Cannot add more "${product.name}". Available stock limit (${maxStock}) reached!`);
+      }
+      return;
+    }
+
     dispatch(
       addToCart({
         id: product.id || product._id,
@@ -109,20 +134,36 @@ const POSPage = () => {
         sellingPrice: product.sellingPrice,
         price: product.sellingPrice,
         qty: 1,
+        stock: maxStock,
         barcode: product.barcode,
         unit: product.unit || 'Pcs',
       })
     );
 
     if (isOdia) {
-      toast.success(`"${product.name}" କାର୍ଟରେ ଯୋଡାଗଲା!`);
+      toast.success(`✓ "${product.name}" କାର୍ଟରେ ଯୋଡାଗଲା!`, { duration: 1200 });
     } else {
-      toast.success(`${product.name} ${t('addedToCartSuccess') || 'added to cart'}`);
+      toast.success(`✓ ${product.name} ${t('addedToCartSuccess') || 'added to cart'}`, { duration: 1200 });
     }
   };
 
   // Cart operations
   const handleUpdateQty = (id, currentQty, delta) => {
+    const item = cart.find((i) => i.id === id);
+    if (!item) return;
+
+    if (delta > 0) {
+      const maxStock = item.stock !== undefined ? Number(item.stock) : Infinity;
+      if (currentQty + delta > maxStock) {
+        if (isOdia) {
+          toast.error(`"${item.name}" ପାଇଁ ସର୍ବାଧିକ ଷ୍ଟକ୍ (${maxStock}) ପହଞ୍ଚିଗଲା!`);
+        } else {
+          toast.error(`Cannot exceed available stock of ${maxStock} for "${item.name}"!`);
+        }
+        return;
+      }
+    }
+
     dispatch(updateCartQty({ id, qty: currentQty + delta }));
   };
 
@@ -474,7 +515,12 @@ const POSPage = () => {
                         <button
                           type="button"
                           onClick={() => handleUpdateQty(item.id, item.qty, 1)}
-                          className="p-1.5 text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+                          disabled={item.stock !== undefined && item.qty >= Number(item.stock)}
+                          className={`p-1.5 transition-colors ${
+                            item.stock !== undefined && item.qty >= Number(item.stock)
+                              ? 'text-slate-300 cursor-not-allowed opacity-50'
+                              : 'text-slate-600 hover:bg-slate-200 cursor-pointer'
+                          }`}
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>

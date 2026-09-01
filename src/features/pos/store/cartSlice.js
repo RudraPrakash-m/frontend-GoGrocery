@@ -37,6 +37,9 @@ const cartSlice = createSlice({
   reducers: {
     addToCart: (state, action) => {
       const product = action.payload;
+      const availableStock =
+        product.stock !== undefined ? Number(product.stock) : Infinity;
+
       const existingIndex = state.items.findIndex(
         (item) =>
           item.id === product.id ||
@@ -45,16 +48,29 @@ const cartSlice = createSlice({
       );
 
       if (existingIndex > -1) {
-        state.items[existingIndex].qty += product.qty || 1;
+        const currentItem = state.items[existingIndex];
+        const itemStock =
+          currentItem.stock !== undefined
+            ? Number(currentItem.stock)
+            : availableStock;
+        const newQty = currentItem.qty + (product.qty || 1);
+        state.items[existingIndex].qty = Math.min(newQty, itemStock);
+        if (currentItem.stock === undefined && product.stock !== undefined) {
+          state.items[existingIndex].stock = Number(product.stock);
+        }
       } else {
-        state.items.push({
-          id: product.id || product._id || Date.now(),
-          name: product.name,
-          price: Number(product.sellingPrice || product.price) || 0,
-          qty: product.qty || 1,
-          barcode: product.barcode,
-          unit: product.unit || 'Pcs',
-        });
+        const initialQty = Math.min(product.qty || 1, availableStock);
+        if (initialQty > 0) {
+          state.items.push({
+            id: product.id || product._id || Date.now(),
+            name: product.name,
+            price: Number(product.sellingPrice || product.price) || 0,
+            qty: initialQty,
+            stock: availableStock,
+            barcode: product.barcode,
+            unit: product.unit || 'Pcs',
+          });
+        }
       }
       saveCartToStorage(state);
     },
@@ -66,7 +82,11 @@ const cartSlice = createSlice({
         if (qty <= 0) {
           state.items.splice(index, 1);
         } else {
-          state.items[index].qty = qty;
+          const maxStock =
+            state.items[index].stock !== undefined
+              ? Number(state.items[index].stock)
+              : Infinity;
+          state.items[index].qty = Math.min(qty, maxStock);
         }
       }
       saveCartToStorage(state);
