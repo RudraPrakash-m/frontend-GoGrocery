@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Scan,
@@ -12,6 +13,7 @@ import {
   Barcode,
   Loader2,
   Package,
+  ArrowLeft,
 } from 'lucide-react';
 import ProductScanner from '../../../components/scanner/ProductScanner';
 import { productService } from '../../products/services/productService';
@@ -23,6 +25,7 @@ import useDocumentTitle from '../../../hooks/useDocumentTitle';
 
 const AddStockPage = () => {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const isOdia = i18n.language === 'or';
 
   useDocumentTitle(isOdia ? 'ଷ୍ଟକ୍ ଯୋଡନ୍ତୁ' : 'Add Stock');
@@ -240,14 +243,32 @@ const AddStockPage = () => {
 
   return (
     <div className="max-w-xl mx-auto space-y-6 relative pb-20">
-      {/* Title */}
-      <div className="pt-1">
-        <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-          {t('addStock') || 'Add & Restock Inventory'}
-        </h1>
-        <p className="text-xs text-slate-500 font-semibold mt-1">
-          Scan to quickly replenish existing stock, or register new products.
-        </p>
+      {/* Title with Back Arrow */}
+      <div className="flex items-center gap-3 pt-1">
+        <button
+          type="button"
+          onClick={() => {
+            if (activeTab !== 'menu') {
+              setActiveTab('menu');
+            } else {
+              navigate('/products');
+            }
+          }}
+          className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 active:scale-95 transition-all shadow-2xs cursor-pointer"
+          title={isOdia ? 'ପଛକୁ ଫେରନ୍ତୁ (Back)' : 'Go Back'}
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div>
+          <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
+            {t('addStock') || 'Add & Restock Inventory'}
+          </h1>
+          <p className="text-xs text-slate-500 font-semibold mt-0.5">
+            {isOdia
+              ? 'ଷ୍ଟକ୍ ଯୋଡନ୍ତୁ କିମ୍ବା ନୂତନ ଉତ୍ପାଦ ପଞ୍ଜିକୃତ କରନ୍ତୁ'
+              : 'Scan to replenish existing stock, or register new products.'}
+          </p>
+        </div>
       </div>
 
       {/* Stock Update Toast Success Banner */}
