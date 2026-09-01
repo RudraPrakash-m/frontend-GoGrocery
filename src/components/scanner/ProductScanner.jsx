@@ -175,31 +175,21 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose, ba
         </div>
       )}
 
-      {/* SCANNING BODY OR QUANTITY PROMPT */}
+      {/* MINIMAL RESPONSIVE QUANTITY PROMPT */}
       {promptProduct ? (
-        <div className="p-5 rounded-3xl bg-emerald-50/90 border-2 border-emerald-300 space-y-4 shadow-md animate-fadeIn">
-          <div className="flex items-center justify-between border-b border-emerald-200/80 pb-2">
-            <span className="text-xs font-extrabold uppercase text-emerald-800 tracking-wider flex items-center gap-1.5">
-              <CheckCircle className="w-4 h-4 text-emerald-600" />
-              {isOdia ? 'ଉତ୍ପାଦ ସ୍କାନ୍ ହେଲା' : 'Scanned Product'}
-            </span>
-            <span className="text-xs font-black text-emerald-900 bg-emerald-200/70 px-2.5 py-1 rounded-lg">
-              {promptProduct.category || 'Grocery'}
-            </span>
-          </div>
-
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 space-y-4 shadow-sm animate-fadeIn">
           <div>
-            <h4 className="text-xl font-black text-slate-900">{promptProduct.name}</h4>
-            <p className="text-xs text-slate-600 font-bold mt-1">
-              ₹{promptProduct.sellingPrice} · {t('stock') || 'Stock'}:{' '}
-              <strong className="text-emerald-800">{promptProduct.stock ?? '∞'} {promptProduct.unit || 'Pcs'}</strong>
+            <h4 className="text-base sm:text-lg font-bold text-slate-900 truncate">
+              {promptProduct.name}
+            </h4>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              ₹{promptProduct.sellingPrice} · {t('stock') || 'Stock'}: {promptProduct.stock ?? '∞'} {promptProduct.unit || 'Pcs'}
             </p>
           </div>
 
-          {/* Quantity Input Box */}
-          <div className="space-y-1.5 pt-1">
-            <label className="block text-xs font-extrabold text-slate-700">
-              {isOdia ? 'ପରିମାଣ (Default 1):' : 'Quantity (Default 1 if left empty):'}
+          <div className="space-y-1">
+            <label className="block text-xs font-semibold text-slate-600">
+              {isOdia ? 'ପରିମାଣ (ଦିଅନ୍ତୁ କିମ୍ବା ୧ ହେବ):' : 'Enter Quantity (default 1):'}
             </label>
             <input
               ref={qtyInputRef}
@@ -215,11 +205,10 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose, ba
                   handleConfirmAddQty();
                 }
               }}
-              className="w-full py-3 px-4 bg-white border-2 border-emerald-400 rounded-2xl text-center text-lg font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-inner"
+              className="w-full py-2.5 px-3 bg-slate-50 border border-slate-300 rounded-xl text-center text-lg font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             />
           </div>
 
-          {/* Action Buttons: Cancel vs Add */}
           <div className="flex items-center gap-2 pt-1">
             <button
               type="button"
@@ -227,7 +216,7 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose, ba
                 setPromptProduct(null);
                 setPromptQty('');
               }}
-              className="flex-1 py-3 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-xs rounded-2xl transition-colors cursor-pointer"
+              className="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
             >
               {isOdia ? 'ବାତିଲ୍' : 'Cancel'}
             </button>
@@ -235,10 +224,9 @@ const ProductScanner = ({ onScan, onProductFound, onProductNotFound, onClose, ba
             <button
               type="button"
               onClick={handleConfirmAddQty}
-              className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              className="flex-1 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
             >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>{isOdia ? 'ଯୋଡନ୍ତୁ (Add)' : 'Add to Sale'}</span>
+              {isOdia ? 'ଯୋଡନ୍ତୁ' : 'Add to Sale'}
             </button>
           </div>
         </div>
