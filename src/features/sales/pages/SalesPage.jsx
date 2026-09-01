@@ -72,19 +72,31 @@ const SalesPage = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs self-start sm:self-auto">
-          <div className="text-right">
+        <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs self-start sm:self-auto min-w-[170px]">
+          <div className="text-right flex-1">
             <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
               {t('totalSalesLabel')}
             </p>
-            <p className="text-xl font-black text-emerald-600">₹{totalSalesAmount.toLocaleString()}</p>
+            {isLoading ? (
+              <div className="py-0.5 flex justify-end">
+                <Loader2 className="w-5 h-5 text-emerald-600 animate-spin" />
+              </div>
+            ) : (
+              <p className="text-xl font-black text-emerald-600">₹{totalSalesAmount.toLocaleString()}</p>
+            )}
           </div>
           <div className="h-8 w-px bg-slate-200" />
-          <div>
+          <div className="flex-1">
             <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
               {t('billsLabel')}
             </p>
-            <p className="text-xl font-black text-slate-900">{totalSalesCount}</p>
+            {isLoading ? (
+              <div className="py-0.5 flex justify-start">
+                <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+              </div>
+            ) : (
+              <p className="text-xl font-black text-slate-900">{totalSalesCount}</p>
+            )}
           </div>
         </div>
       </div>
@@ -131,7 +143,12 @@ const SalesPage = () => {
           {t('savedInvoicesHeader')}
         </h3>
 
-        {salesHistory.length === 0 ? (
+        {isLoading ? (
+          <div className="py-12 text-center text-slate-400 flex flex-col items-center justify-center gap-2 font-bold text-xs">
+            <Loader2 className="w-6 h-6 text-emerald-600 animate-spin" />
+            <span>{isOdia ? 'ବିକ୍ରୟ ତଥ୍ୟ ଲୋଡ୍ ହେଉଛି...' : 'Loading sales data...'}</span>
+          </div>
+        ) : salesHistory.length === 0 ? (
           <p className="text-center py-10 text-slate-400 font-bold text-sm">
             {t('noSalesHistory')}
           </p>

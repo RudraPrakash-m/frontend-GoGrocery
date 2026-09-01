@@ -32,6 +32,7 @@ import ReceiptBill from '../../sales/components/ReceiptBill';
 import ProductScanner from '../../../components/scanner/ProductScanner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useProducts, PRODUCT_QUERY_KEYS } from '../../products/hooks/useProductsQuery';
+import { SALES_QUERY_KEYS } from '../../sales/hooks/useSalesQuery';
 import usePOSShortcuts from '../hooks/usePOSShortcuts';
 import useDocumentTitle from '../../../hooks/useDocumentTitle';
 import useDebounce from '../../../hooks/useDebounce';
@@ -247,6 +248,7 @@ const POSPage = () => {
         });
       });
       queryClient.invalidateQueries({ queryKey: PRODUCT_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: SALES_QUERY_KEYS.all });
     } catch (_err) {
       // Silently ignore cache update errors
     }
