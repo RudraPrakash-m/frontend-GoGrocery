@@ -51,16 +51,26 @@ const POSPage = () => {
   const step = cartState.activeStep || 'cart';
   const paymentMode = cartState.paymentMode || 'UPI';
 
+  const [activeTab, setActiveTab] = useState('menu'); // 'menu', 'scan'
+  const [showSearch, setShowSearch] = useState(false);
+  const [search, setSearch] = useState('');
+  const [completedInvoice, setCompletedInvoice] = useState(null);
+
+  // Fallback step to 'cart' if step is 'completed' but invoice data is no longer present in local state
+  const effectiveStep =
+    step === 'completed' && !completedInvoice ? 'cart' : step || 'cart';
+
+  React.useEffect(() => {
+    if (step === 'completed' && !completedInvoice) {
+      dispatch(setActiveStep('cart'));
+    }
+  }, [step, completedInvoice, dispatch]);
+
   const currentStoreName = authUser?.storeName || settings?.storeName || 'GoGrocery';
   const currentAddress =
     authUser?.address || settings?.address || 'Plot 21, Market Road, Bhubaneswar';
   const currentPhone = authUser?.phone || settings?.phone || '7846807407';
   const currentGstin = authUser?.gstin || settings?.gstin || '21ABCDE1234F1Z5';
-
-  const [activeTab, setActiveTab] = useState('menu'); // 'menu', 'scan'
-  const [showSearch, setShowSearch] = useState(false);
-  const [search, setSearch] = useState('');
-  const [completedInvoice, setCompletedInvoice] = useState(null);
 
   const searchInputRef = useRef(null);
   const debouncedSearch = useDebounce(search, 250);
@@ -211,7 +221,7 @@ const POSPage = () => {
   return (
     <div className="max-w-xl mx-auto space-y-6 relative pb-20">
       {/* COMPLETED STEP - SHOWING PROPER PRINTABLE STORE RECEIPT */}
-      {step === 'completed' && completedInvoice && (
+      {effectiveStep === 'completed' && completedInvoice && (
         <div className="space-y-4">
           <div className="text-center pt-2">
             <span className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-emerald-100 text-emerald-800 font-extrabold text-sm rounded-full">
@@ -225,7 +235,7 @@ const POSPage = () => {
       )}
 
       {/* PAYMENT STEP */}
-      {step === 'payment' && (
+      {effectiveStep === 'payment' && (
         <div className="space-y-6">
           <div>
             <button
@@ -312,7 +322,7 @@ const POSPage = () => {
       )}
 
       {/* DEFAULT CART & POS SCANNER STEP */}
-      {step === 'cart' && (
+      {(effectiveStep === 'cart' || (effectiveStep !== 'payment' && effectiveStep !== 'completed')) && (
         <>
           {/* Action Cards (In-Page Search Toggle & Hardware Scanner Launcher) */}
           <POSActionCards
