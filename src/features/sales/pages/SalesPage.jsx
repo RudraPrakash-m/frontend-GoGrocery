@@ -2,9 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
-import { Receipt, QrCode, Banknote, CreditCard, Eye, X, Loader2 } from 'lucide-react';
+import { Receipt, QrCode, Banknote, CreditCard, Eye, X } from 'lucide-react';
 import ReceiptBill from '../components/ReceiptBill';
 import { useSalesHistory } from '../hooks/useSalesQuery';
+import Loader from '../../../components/common/Loader';
 
 // Helper to normalize payment mode across all API and Redux object schemas
 const getPaymentMode = (item) =>
@@ -60,6 +61,18 @@ const SalesPage = () => {
     return salesHistory.length;
   }, [apiSummary, salesHistory, filter]);
 
+  if (isLoading) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-6 pb-20">
+        <Loader
+          text={isOdia ? 'ବିକ୍ରୟ ତଥ୍ୟ ଲୋଡ୍ ହେଉଛି...' : 'Loading sales data...'}
+          fullScreen={false}
+          className="py-24"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
       {/* Title */}
@@ -83,13 +96,9 @@ const SalesPage = () => {
               <p className="text-[9px] sm:text-[11px] font-extrabold text-slate-400 uppercase tracking-wider truncate">
                 {t('totalSalesLabel') || 'Total Sales'}
               </p>
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 text-emerald-600 animate-spin mt-0.5" />
-              ) : (
-                <p className="text-base sm:text-xl font-black text-slate-900 leading-tight truncate">
-                  ₹{totalSalesAmount.toLocaleString()}
-                </p>
-              )}
+              <p className="text-base sm:text-xl font-black text-slate-900 leading-tight truncate">
+                ₹{totalSalesAmount.toLocaleString()}
+              </p>
             </div>
           </div>
 
@@ -102,13 +111,9 @@ const SalesPage = () => {
               <p className="text-[9px] sm:text-[11px] font-extrabold text-slate-400 uppercase tracking-wider truncate">
                 {t('billsLabel') || 'Total Bills'}
               </p>
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 text-slate-400 animate-spin mt-0.5" />
-              ) : (
-                <p className="text-base sm:text-xl font-black text-slate-900 leading-tight truncate">
-                  {totalSalesCount}
-                </p>
-              )}
+              <p className="text-base sm:text-xl font-black text-slate-900 leading-tight truncate">
+                {totalSalesCount}
+              </p>
             </div>
           </div>
         </div>
@@ -156,12 +161,7 @@ const SalesPage = () => {
           {t('savedInvoicesHeader')}
         </h3>
 
-        {isLoading ? (
-          <div className="py-12 text-center text-slate-400 flex flex-col items-center justify-center gap-2 font-bold text-xs">
-            <Loader2 className="w-6 h-6 text-emerald-600 animate-spin" />
-            <span>{isOdia ? 'ବିକ୍ରୟ ତଥ୍ୟ ଲୋଡ୍ ହେଉଛି...' : 'Loading sales data...'}</span>
-          </div>
-        ) : salesHistory.length === 0 ? (
+        {salesHistory.length === 0 ? (
           <p className="text-center py-10 text-slate-400 font-bold text-sm">
             {t('noSalesHistory')}
           </p>
